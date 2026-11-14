@@ -2,13 +2,14 @@
 
 #include "Network.h"
 #include "RingBuffer.h"
+#include <ctime>
 
 struct Session
 {
 	bool del;
 
 	SOCKET sock;
-	RingBuffer sendRingBuf;
+	RingBuffer sendRingBuf{10 * 1024};
 	RingBuffer recvRingBuf;
 
 	SOCKADDR_IN addr;
@@ -20,4 +21,11 @@ struct Session
 	unsigned short y;
 
 	bool move;
+
+	clock_t attack1BaseTick;
+	clock_t attack2BaseTick;
+	clock_t attack3BaseTick;
+	clock_t attack1Cooldown;
+	clock_t attack2Cooldown;
+	clock_t attack3Cooldown;
 };

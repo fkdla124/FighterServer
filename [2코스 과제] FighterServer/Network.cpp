@@ -1,5 +1,6 @@
 ﻿#include <cstdio>
 #include <cmath>
+#include <ctime>
 
 #include "Network.h"
 #include "RingBuffer.h"
@@ -9,9 +10,33 @@
 #include "PacketDefine.h"
 #include "GameLogic.h"
 #include "Session.h"
+#include "Debug.h"
 
 #include <windows.h>
 #pragma comment(lib, "winmm.lib")
+
+// todo
+// 
+// V 고민사항 -> 해결 완료
+// V 현재 SendUnicast(), SendBroadcast() 에서 메시지 보내면 다음 프레임에 실제 send()가 이루어짐.
+// V 클라이언트가 다른 플레이어의 행동을 보는 것이 한 프레임 뒤가 됨.
+// 
+// 해결 방법 
+// 네트워크처리 하단부에 Send 링버퍼를 한번에 flush하는 함수를 넣기. 
+//   ㄴ-> 이렇게 하면 wset의 역할은 이전프레임에 특별한 이유(보통 WSAEWOULDBLOCK 또는 TCP 송신버퍼 가득참)로 송신하지 못한 것들만 송신하는 구조가됨.
+//   ㄴ-> 네트워크 처리 한 번당 송신이 두 번 나오는 구조. wset에서 한 번, Network() 마지막에 한 번.
+
+
+
+// 다음수업에 클라, 서버 세부사항이 공개되면 추가할 사항.
+// 공격별 정확한 쿨타임, 정확한 타격점, 정확한 데미지
+// 충돌처리 히트박스. (캐릭터에 딱 맞는 사각형 사이즈)
+// 
+// 지금 쿨타임 처리를 공격 개별로 해놨는데, 이렇게 되면 클라에서 공격 3개를 같은시간에 보내면 실제 공격처리가 돼버린다. (물론 조작한 클라만 되겠지만)
+// 공격모션이 끝나야 다른 공격을 하는 건데, 서버에서 세션정보에 attackMotion = true 라는 상태를 추가해서 관리해야되나 고민이다.
+
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 전역 데이터
@@ -20,8 +45,26 @@
 SOCKET listenSocket;
 
 List<Session*> sessionList;
-
 int idCount = 0;
+
+
+
+// 공격 맞는사람은 히트박스로. 타격하는사람은 점으로 타격
+
+// 캐릭터 좌표가 양발 중앙쪽에 잡혀있을 것으로 예상하고 거기서 Direction 방향으로 +x +y 하는 값
+// 타격점 좌표
+#define ATTACK1_POINT_X 50
+#define ATTACK1_POINT_Y 100
+
+#define ATTACK2_POINT_X 50
+#define ATTACK2_POINT_Y 100
+
+#define ATTACK3_POINT_X 50
+#define ATTACK3_POINT_Y 100
+
+// 히트박스 크기. 캐릭터가 100x200 사이즈 정도라고 추측하고 만들었음.
+#define HITBOX_WIDTH 100
+#define HITBOX_HEIGHT 200
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -35,8 +78,12 @@ void Network();
 void AcceptClient();
 template <typename T>
 void SendUnicast(Session* session, char msgType, const T& msg);
+template <typename T>
+void SendBroadcast(Session* exceptSession, char msgType, const T& msg);
+void ProcessMessage(Session* session);
+void FlushSendBuffer(Session* session);
 void DisconnectMarkedSession();
-void FlushSendBuffer();
+bool CheckCollision(Session* attacker, Session* target, short attackPointX, short attackPointY);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -182,6 +229,22 @@ void Network()
 			if (returnValueWSARecv == SOCKET_ERROR)
 			{
 				errorCodeWSARecv = WSAGetLastError();
+
+				if (errorCodeWSARecv == WSAECONNRESET)
+				{
+					// RST 전송으로 끊어진 경우
+					(*it)->del = true;
+					continue;
+				}
+				else if (errorCodeWSARecv == WSAECONNABORTED)
+				{
+					// 자세히 모르겠지만 끊어진 경우
+					(*it)->del = true;
+					continue;
+				}
+				else if (errorCodeWSARecv == WSAEWOULDBLOCK)
+					continue;
+
 				printf("WSARecv() error. %d\n", errorCodeWSARecv);
 				Sleep(INFINITE);
 			}
@@ -189,7 +252,7 @@ void Network()
 			// 메시지 처리
 			ProcessMessage((*it));
 		}
-		
+
 		// wset 처리
 		if (FD_ISSET((*it)->sock, &wset))
 		{
@@ -199,6 +262,12 @@ void Network()
 
 	// 지연삭제
 	DisconnectMarkedSession();
+
+	// 돌면서 다 보내기. (이번 프레임에 수신한 메시지 처리하면서 새로 송신한 것들 바로 보내기 위함)
+	for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
+	{
+		FlushSendBuffer((*it));
+	}
 }
 
 template <typename T>
@@ -218,36 +287,56 @@ void SendUnicast(Session* session, char msgType, const T& msg)
 	returnValuePush = session->sendRingBuf.push(msgBuffer, sizeof(msgBuffer));
 	if (returnValuePush != sizeof(msgBuffer))
 	{
-		printf("SendUnicast() -> session->sendRingBuf.push() error. capacity: %d, size: %d, pushSize: %d, return: %d\n",
-			session->sendRingBuf.capacity(), session->sendRingBuf.size(), sizeof(msgBuffer), returnValuePush);
-		Sleep(INFINITE);
+		// 송신링버퍼가 꽉찼음. 또는 나의 링버퍼 push가 잘못됨.
+		// 파일로 로그 남기고 연결 끊기.
+		tm t;
+		time_t tt = time(NULL);
+		localtime_s(&t, &tt);
+		char fileName[256];
+		sprintf_s(fileName, "[SendRIngBuffer Full Error]%04d%02d%02d_%02d%02d%02d.txt", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
+
+		#pragma warning(disable:6387 6328) // fp가 NULL일 수 있다. fwprintf() 정수 서식지정자 타입 불일치
+		FILE* fp;
+		fopen_s(&fp, fileName, "wb");
+
+		// UTF-16 LE BOM
+		unsigned char bom[] = { 0xFF, 0xFE };
+		fwrite(bom, 1, 2, fp);
+
+		fwprintf(fp, L"RingBuffer Full error. FILE: %s, LINE: %d, recvSessionID: %d \n", __FILEW__, __LINE__, session->id);
+		fwprintf(fp, L"RingBuffer Capacity: %d\n", (int)(session->sendRingBuf.capacity()));
+		fwprintf(fp, L"RingBuffer Size: %d\n", session->sendRingBuf.size());
+		fwprintf(fp, L"Push MsgLen: %d\n", (int)(sizeof(msgBuffer)));
+		fwprintf(fp, L"returnValuePush: %d\n", returnValuePush);
+		fwprintf(fp, L"MsgType = %d\n", header.type);
+		fclose(fp);
+		#pragma warning(default:6387 6328)
+
+		// 지연삭제 마킹 및 연결끊기. SO_LINGER {0, 0} RST 전송
+		session->del = true;
+
+		printf("[!!!Error!!!] SendUnicast() -> session->sendRingBuf.push() error. capacity: %d, size: %d, pushSize: %d, return: %d\n",
+			session->sendRingBuf.capacity(), session->sendRingBuf.size(), (int)sizeof(msgBuffer), returnValuePush);
 	}
 }
 
 template <typename T>
 void SendBroadcast(Session* exceptSession, char msgType, const T& msg)
 {
-	// 헤더생성
-	MessageHeader header;
-	header.len = sizeof(T);
-	header.type = msgType;
-
-	// 메시지생성
-	char msgBuffer[sizeof(header) + sizeof(T)];
-	memcpy(msgBuffer, &header, sizeof(header));
-	memcpy(msgBuffer + sizeof(header), &msg, sizeof(T));
-
-	for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
+	if (exceptSession == nullptr)
 	{
-		if ((*it)->sock != exceptSession->sock)
+		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
 		{
-			// 링버퍼 push
-			returnValuePush = (*it)->sendRingBuf.push(msgBuffer, sizeof(msgBuffer));
-			if (returnValuePush != sizeof(msgBuffer))
+			SendUnicast((*it), msgType, msg);
+		}
+	}
+	else
+	{
+		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
+		{
+			if ((*it)->sock != exceptSession->sock)
 			{
-				printf("SendBroadcast() -> (*it)->sendRingBuf.push() error. capacity: %d, size: %d, pushSize: %d, return: %d\n",
-					session->sendRingBuf.capacity(), session->sendRingBuf.size(), sizeof(msgBuffer), returnValuePush);
-				Sleep(INFINITE);
+				SendUnicast((*it), msgType, msg);
 			}
 		}
 	}
@@ -283,6 +372,12 @@ void AcceptClient()
 		acceptSession->hp = 100;
 		acceptSession->x = 0;
 		acceptSession->y = 0;
+		acceptSession->attack1BaseTick = clock();
+		acceptSession->attack2BaseTick = clock();
+		acceptSession->attack3BaseTick = clock();
+		acceptSession->attack1Cooldown = 0;
+		acceptSession->attack2Cooldown = 0;
+		acceptSession->attack3Cooldown = 0;
 		sessionList.push_back(acceptSession);
 
 		// 접속한 플레이어 생성 메시지
@@ -327,6 +422,10 @@ void DisconnectMarkedSession()
 
 void FlushSendBuffer(Session* session)
 {
+	// 이미 마킹된 세션이 들어올 가능성이 존재함. 미리 나가기
+	if (session->del == true)
+		return;
+
 	WSABUF wsaBuf[2];
 	wsaBuf[0].buf = session->sendRingBuf.GetFront();
 	wsaBuf[0].len = session->sendRingBuf.DirectPopSize();
@@ -338,7 +437,33 @@ void FlushSendBuffer(Session* session)
 	if (returnValueWSASend == SOCKET_ERROR)
 	{
 		errorCodeWSASend = WSAGetLastError();
+
+		if (errorCodeWSASend == WSAECONNRESET)
+		{
+			// RST 전송으로 끊어진 경우
+			session->del = true;
+			return;
+		}
+		else if (errorCodeWSASend == WSAECONNABORTED)
+		{
+			// 자세히 모르겠지만 끊어진 경우
+			session->del = true;
+			return;
+		}
+		else if (errorCodeWSASend == WSAEWOULDBLOCK)
+			return;
+
 		printf("WSASend() error. %d\n", errorCodeWSASend);
+		Sleep(INFINITE);
+	}
+
+	// 정말로 send() 함수가 보내기로한 len 이하로만 반활할까? 정말 msdn 문서와 동일할까?
+	if (bytesSent > session->sendRingBuf.size() || bytesSent == 0)
+	{
+		printf("WSASend() return -> %d\n", returnValueWSASend);
+		printf("WSAGetLastError() -> %d\n", WSAGetLastError());
+		printf("send() msgLen -> %d\n", session->sendRingBuf.size());
+		printf("bytesSent -> %d\n", bytesSent);
 		Sleep(INFINITE);
 	}
 
@@ -381,6 +506,8 @@ void ProcessMessage(Session* session)
 				session->x = msgMoveStart.x;
 				session->y = msgMoveStart.y;
 
+				DebugPrint("[Client MoveStart] ID: %d, Direction: %d, X: %d, Y: %d\n", session->id, session->direction, session->x, session->y);
+
 				MoveStartOther msgMoveStartOther;
 				msgMoveStartOther.direction = session->direction;
 				msgMoveStartOther.id = session->id;
@@ -407,16 +534,24 @@ void ProcessMessage(Session* session)
 				session->x = msgMoveStop.x;
 				session->y = msgMoveStop.y;
 
+				DebugPrint("[Client MoveStop] ID: %d, Direction: %d, X: %d, Y: %d\n", session->id, session->direction, session->x, session->y);
+
 				MoveStopOther msgMoveStopOther;
 				msgMoveStopOther.direction = session->direction;
 				msgMoveStopOther.id = session->id;
 				msgMoveStopOther.x = session->x;
 				msgMoveStopOther.y = session->y;
-				SendBroadcast(session, PACKET_RES_MOVE_START, msgMoveStopOther);
+				SendBroadcast(session, PACKET_RES_MOVE_STOP, msgMoveStopOther);
 				break;
 			}
 			case PACKET_REQ_ATTACK1:
 			{
+				// 쿨타임. 일단은 1/3 초
+				if (session->attack1Cooldown < CLOCKS_PER_SEC / 3)
+					break;
+
+				session->attack1Cooldown = 0;
+
 				Attack1Request msgAttack1Request;
 				session->recvRingBuf.pop((char*)&msgAttack1Request, sizeof(msgAttack1Request));
 
@@ -432,11 +567,49 @@ void ProcessMessage(Session* session)
 				session->x = msgAttack1Request.x;
 				session->y = msgAttack1Request.y;
 
-				// 공격처리 해야하는데.. 히트박스로 하나? 어찌하나? 모르겠음 아직.
+				DebugPrint("[Client Attack1] ID: %d, Direction: %d, X: %d, Y: %d\n", session->id, session->direction, session->x, session->y);
+
+				Attack1Response msgAttack1Response;
+				msgAttack1Response.direction = session->direction;
+				msgAttack1Response.id = session->id;
+				msgAttack1Response.x = session->x;
+				msgAttack1Response.y = session->y;
+				SendBroadcast(session, PACKET_RES_ATTACK1, msgAttack1Response);
+
+				// 충돌체크
+				for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
+				{
+					if (CheckCollision(session, (*it), session->x + ATTACK1_POINT_X, session->y + ATTACK1_POINT_Y))
+					{
+						// 데미지 메시지 생성. 모두에게 보내기
+						(*it)->hp -= 5;
+						Damage msgDamage;
+						msgDamage.AttackID = session->id;
+						msgDamage.DamageID = (*it)->id;
+						msgDamage.DamageHP = (*it)->hp;
+						SendBroadcast(nullptr, PACKET_RES_DAMAGE, msgDamage);
+
+						// 피격자 사망.
+						if ((*it)->hp <= 0)
+						{
+							// 캐릭터 삭제 메시지. 모두에게 보내야할까? 삭제하는 플레이어 빼고 보내야할까?
+							(*it)->del = true;
+							DeletePlayer msgDeletePlayer;
+							msgDeletePlayer.id = (*it)->id;
+							SendBroadcast(nullptr, PACKET_RES_DELETE_CHARACTER, msgDeletePlayer);
+						}
+					}
+				}
 				break;
 			}
 			case PACKET_REQ_ATTACK2:
 			{
+				// 쿨타임. 일단은 1/3 초
+				if (session->attack2Cooldown < CLOCKS_PER_SEC / 3)
+					break;
+
+				session->attack2Cooldown = 0;
+
 				Attack2Request msgAttack2Request;
 				session->recvRingBuf.pop((char*)&msgAttack2Request, sizeof(msgAttack2Request));
 
@@ -448,15 +621,54 @@ void ProcessMessage(Session* session)
 					return;
 				}
 
+				DebugPrint("[Client Attack2] ID: %d, Direction: %d, X: %d, Y: %d\n", session->id, session->direction, session->x, session->y);
+
 				session->direction = msgAttack2Request.direction;
 				session->x = msgAttack2Request.x;
 				session->y = msgAttack2Request.y;
 
-				// 공격처리 해야하는데.. 히트박스로 하나? 어찌하나? 모르겠음 아직.
+				// 다른플레이어에게 브로드캐스트
+				Attack2Response msgAttack2Response;
+				msgAttack2Response.direction = session->direction;
+				msgAttack2Response.id = session->id;
+				msgAttack2Response.x = session->x;
+				msgAttack2Response.y = session->y;
+				SendBroadcast(session, PACKET_RES_ATTACK2, msgAttack2Response);
+
+				// 충돌체크
+				for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
+				{
+					if (CheckCollision(session, (*it), session->x + ATTACK2_POINT_X, session->y + ATTACK2_POINT_Y))
+					{
+						// 데미지 메시지 생성. 모두에게 보내기
+						(*it)->hp -= 5;
+						Damage msgDamage;
+						msgDamage.AttackID = session->id;
+						msgDamage.DamageID = (*it)->id;
+						msgDamage.DamageHP = (*it)->hp;
+						SendBroadcast(nullptr, PACKET_RES_DAMAGE, msgDamage);
+
+						// 피격자 사망.
+						if ((*it)->hp <= 0)
+						{
+							// 캐릭터 삭제 메시지. 모두에게 보내야할까? 삭제하는 플레이어 빼고 보내야할까?
+							(*it)->del = true;
+							DeletePlayer msgDeletePlayer;
+							msgDeletePlayer.id = (*it)->id;
+							SendBroadcast(nullptr, PACKET_RES_DELETE_CHARACTER, msgDeletePlayer);
+						}
+					}
+				}
 				break;
 			}
 			case PACKET_REQ_ATTACK3:
 			{
+				// 쿨타임. 일단은 1/3 초
+				if (session->attack3Cooldown < CLOCKS_PER_SEC / 3)
+					break;
+
+				session->attack3Cooldown = 0;
+
 				Attack3Request msgAttack3Request;
 				session->recvRingBuf.pop((char*)&msgAttack3Request, sizeof(msgAttack3Request));
 
@@ -468,13 +680,63 @@ void ProcessMessage(Session* session)
 					return;
 				}
 
+				DebugPrint("[Client Attack3] ID: %d, Direction: %d, X: %d, Y: %d\n", session->id, session->direction, session->x, session->y);
+
 				session->direction = msgAttack3Request.direction;
 				session->x = msgAttack3Request.x;
 				session->y = msgAttack3Request.y;
 
-				// 공격처리 해야하는데.. 히트박스로 하나? 어찌하나? 모르겠음 아직.
+				Attack3Response msgAttack3Response;
+				msgAttack3Response.direction = session->direction;
+				msgAttack3Response.id = session->id;
+				msgAttack3Response.x = session->x;
+				msgAttack3Response.y = session->y;
+				SendBroadcast(session, PACKET_RES_ATTACK3, msgAttack3Response);
+
+				// 충돌체크
+				for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
+				{
+					if (CheckCollision(session, (*it), session->x + ATTACK3_POINT_X, session->y + ATTACK3_POINT_Y))
+					{
+						// 데미지 메시지 생성. 모두에게 보내기
+						(*it)->hp -= 5;
+						Damage msgDamage;
+						msgDamage.AttackID = session->id;
+						msgDamage.DamageID = (*it)->id;
+						msgDamage.DamageHP = (*it)->hp;
+						SendBroadcast(nullptr, PACKET_RES_DAMAGE, msgDamage);
+
+						// 피격자 사망.
+						if ((*it)->hp <= 0)
+						{
+							// 캐릭터 삭제 메시지. 모두에게 보내야할까? 삭제하는 플레이어 빼고 보내야할까?
+							(*it)->del = true;
+							DeletePlayer msgDeletePlayer;
+							msgDeletePlayer.id = (*it)->id;
+							SendBroadcast(nullptr, PACKET_RES_DELETE_CHARACTER, msgDeletePlayer);
+						}
+					}
+				}
 				break;
 			}
 		}
 	}
+}
+
+bool CheckCollision(Session* attacker, Session* target, short attackPointX, short attackPointY)
+{
+	if (attacker == nullptr || target == nullptr)
+		return false;
+
+	// 타겟 히트박스
+	short hitBoxStartX = target->x - (HITBOX_WIDTH / 2);
+	short hitBoxEndX = target->x + (HITBOX_WIDTH / 2);
+	short hitBoxStartY = target->y;
+	short hitBoxEndY = target->y + HITBOX_HEIGHT;
+
+	// 타격점(x, y)가 플레이어 히트박스 내부에 있다면 타격
+	if (attackPointX >= hitBoxStartX && attackPointX <= hitBoxEndX && attackPointY >= hitBoxStartY && attackPointY <= hitBoxEndY)
+		return true;
+
+	return false;
 }

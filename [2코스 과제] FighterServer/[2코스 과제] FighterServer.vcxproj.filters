@@ -68,5 +68,8 @@
     <ClInclude Include="Session.h">
       <Filter>소스 파일\Network</Filter>
     </ClInclude>
+    <ClInclude Include="Debug.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
