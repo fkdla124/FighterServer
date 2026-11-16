@@ -41,7 +41,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 전역 데이터
 
-#define SERVER_PORT 25000
+#define SERVER_PORT 5000
 SOCKET listenSocket;
 
 List<Session*> sessionList;
@@ -248,6 +248,16 @@ void Network()
 				printf("WSARecv() error. %d\n", errorCodeWSARecv);
 				Sleep(INFINITE);
 			}
+			else if (bytesRecved == 0)
+			{
+				// FIN 전송으로 끊어진 경우
+				(*it)->del = true;
+				continue;
+			}
+
+			// DebugPrint("returnValueWSARecv: %d, bytesRecvd: %d\n", returnValueWSARecv, bytesRecved);
+
+			(*it)->recvRingBuf.MoveRear(bytesRecved);
 
 			// 메시지 처리
 			ProcessMessage((*it));
@@ -275,6 +285,7 @@ void SendUnicast(Session* session, char msgType, const T& msg)
 {
 	// 헤더생성
 	MessageHeader header;
+	header.packetCode = 0x89; // 없어도되는데 원장님 클라에 존재함.
 	header.len = sizeof(T);
 	header.type = msgType;
 
@@ -370,8 +381,8 @@ void AcceptClient()
 		acceptSession->addr = acceptAddr;
 		acceptSession->id = idCount++;
 		acceptSession->hp = 100;
-		acceptSession->x = 0;
-		acceptSession->y = 0;
+		acceptSession->x = 300;
+		acceptSession->y = 300;
 		acceptSession->attack1BaseTick = clock();
 		acceptSession->attack2BaseTick = clock();
 		acceptSession->attack3BaseTick = clock();
@@ -380,27 +391,40 @@ void AcceptClient()
 		acceptSession->attack3Cooldown = 0;
 		sessionList.push_back(acceptSession);
 
-		// 접속한 플레이어 생성 메시지
-		CreatePlayer msg;
-		msg.id = acceptSession->id;
-		msg.x = acceptSession->x;
-		msg.y = acceptSession->y;
-		msg.direction = PACKET_MOVE_DIR_RR;
-		msg.hp = 100;
-		SendUnicast(acceptSession, PACKET_RES_CREATE_MY_CHARACTER, msg);
+		char acceptSessionIp[16];
+		InetNtopA(AF_INET, &acceptSession->addr.sin_addr, acceptSessionIp, sizeof(acceptSessionIp));
+		DebugPrint("[Client Accept %s:%d] id: %d\n", acceptSessionIp, acceptSession->addr.sin_port, acceptSession->id);
 
-		// 다른 플레이어 생성 메시지
+		// 접속한 플레이어 생성 메시지
+		CreatePlayer msgCreatePlayer;
+		msgCreatePlayer.id = acceptSession->id;
+		msgCreatePlayer.x = acceptSession->x;
+		msgCreatePlayer.y = acceptSession->y;
+		msgCreatePlayer.direction = PACKET_MOVE_DIR_RR;
+		msgCreatePlayer.hp = 100;
+		SendUnicast(acceptSession, PACKET_RES_CREATE_MY_CHARACTER, msgCreatePlayer);
+
+		// 접속한 플레이어를 다른 플레이어에게 알리기
+		CreateOther msgCreateOther;
+		msgCreateOther.id = acceptSession->id;
+		msgCreateOther.x = acceptSession->x;
+		msgCreateOther.y = acceptSession->y;
+		msgCreateOther.direction = acceptSession->direction;
+		msgCreateOther.hp = acceptSession->hp;
+		SendBroadcast(acceptSession, PACKET_RES_CREATE_OTHER_CHARACTER, msgCreateOther);
+
+		// 접속한 플레이어에게 다른 플레이어들 생성하는 메시지
 		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
 		{
 			if ((*it)->id != acceptSession->id)
 			{
-				CreateOther msg;
-				msg.id = (*it)->id;
-				msg.x = (*it)->x;
-				msg.y = (*it)->y;
-				msg.direction = (*it)->direction;
-				msg.hp = (*it)->hp;
-				SendUnicast(acceptSession, PACKET_RES_CREATE_OTHER_CHARACTER, msg);
+				CreateOther msgCreateOther;
+				msgCreateOther.id = (*it)->id;
+				msgCreateOther.x = (*it)->x;
+				msgCreateOther.y = (*it)->y;
+				msgCreateOther.direction = (*it)->direction;
+				msgCreateOther.hp = (*it)->hp;
+				SendUnicast(acceptSession, PACKET_RES_CREATE_OTHER_CHARACTER, msgCreateOther);
 			}
 		}
 	}
@@ -426,14 +450,25 @@ void FlushSendBuffer(Session* session)
 	if (session->del == true)
 		return;
 
+	if (session->sendRingBuf.empty() == true)
+		return;
+
+	DWORD bufCount = 0;
+
 	WSABUF wsaBuf[2];
 	wsaBuf[0].buf = session->sendRingBuf.GetFront();
 	wsaBuf[0].len = session->sendRingBuf.DirectPopSize();
-	wsaBuf[1].buf = session->sendRingBuf.GetBuffer();
-	wsaBuf[1].len = static_cast<ULONG>(session->sendRingBuf.GetRear() - wsaBuf[1].buf);
+	bufCount++;
+
+	if (session->sendRingBuf.DirectPopSize() < session->sendRingBuf.size())
+	{
+		wsaBuf[1].buf = session->sendRingBuf.GetBuffer();
+		wsaBuf[1].len = static_cast<ULONG>(session->sendRingBuf.GetRear() - wsaBuf[1].buf);
+		bufCount++;
+	}
 
 	DWORD bytesSent;
-	returnValueWSASend = WSASend(session->sock, wsaBuf, 2, &bytesSent, NULL, NULL, NULL);
+	returnValueWSASend = WSASend(session->sock, wsaBuf, bufCount, &bytesSent, NULL, NULL, NULL);
 	if (returnValueWSASend == SOCKET_ERROR)
 	{
 		errorCodeWSASend = WSAGetLastError();
@@ -480,11 +515,13 @@ void ProcessMessage(Session* session)
 			break;
 
 		MessageHeader header;
-		session->recvRingBuf.pop((char*)&header, sizeof(header));
+		session->recvRingBuf.peek((char*)&header, sizeof(header));
 
 		// 최소한 헤더 + 메시지 받았는가?
 		if (session->recvRingBuf.size() < sizeof(header) + header.len)
 			break;
+
+		session->recvRingBuf.MoveFront(sizeof(header));
 
 		switch (header.type)
 		{
@@ -495,8 +532,10 @@ void ProcessMessage(Session* session)
 
 				// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
 				// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
-				if (abs(msgMoveStart.x - session->x) > MOVE_CHARACTER_PER_FRAME * 2 || abs(msgMoveStart.y - session->y) > MOVE_CHARACTER_PER_FRAME * 2)
+				if (abs(msgMoveStart.x - session->x) > RANGE_MOVE_ERROR || abs(msgMoveStart.y - session->y) > RANGE_MOVE_ERROR)
 				{
+					DebugPrint("[Disconnect Client -> MoveStart Error] ID: %d, Direction: %d, X: %d, Y: %d, x-diff: %d, y-diff: %d\n", 
+						session->id, msgMoveStart.direction, msgMoveStart.x, msgMoveStart.y, abs(msgMoveStart.x - session->x), abs(msgMoveStart.y - session->y));
 					session->del = true;
 					return;
 				}
@@ -523,8 +562,10 @@ void ProcessMessage(Session* session)
 
 				// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
 				// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
-				if (abs(msgMoveStop.x - session->x) > MOVE_CHARACTER_PER_FRAME * 2 || abs(msgMoveStop.y - session->y) > MOVE_CHARACTER_PER_FRAME * 2)
+				if (abs(msgMoveStop.x - session->x) > RANGE_MOVE_ERROR || abs(msgMoveStop.y - session->y) > RANGE_MOVE_ERROR)
 				{
+					DebugPrint("[Disconnect Client -> Client MoveStop Error] ID: %d, Direction: %d, X: %d, Y: %d, x-diff: %d, y-diff: %d\n",
+						session->id, msgMoveStop.direction, msgMoveStop.x, msgMoveStop.y, abs(msgMoveStop.x - session->x), abs(msgMoveStop.y - session->y));
 					session->del = true;
 					return;
 				}
@@ -557,8 +598,10 @@ void ProcessMessage(Session* session)
 
 				// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
 				// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
-				if (abs(msgAttack1Request.x - session->x) > MOVE_CHARACTER_PER_FRAME * 2 || abs(msgAttack1Request.y - session->y) > MOVE_CHARACTER_PER_FRAME * 2)
+				if (abs(msgAttack1Request.x - session->x) > RANGE_MOVE_ERROR || abs(msgAttack1Request.y - session->y) > RANGE_MOVE_ERROR)
 				{
+					DebugPrint("[Disconnect Client -> Client Attack1Request Error] ID: %d, Direction: %d, X: %d, Y: %d, x-diff: %d, y-diff: %d\n", 
+						session->id, msgAttack1Request.direction, msgAttack1Request.x, msgAttack1Request.y, abs(msgAttack1Request.x - session->x), abs(msgAttack1Request.y - session->y));
 					session->del = true;
 					return;
 				}
@@ -579,10 +622,10 @@ void ProcessMessage(Session* session)
 				// 충돌체크
 				for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
 				{
-					if (CheckCollision(session, (*it), session->x + ATTACK1_POINT_X, session->y + ATTACK1_POINT_Y))
+					if (session->id != (*it)->id && CheckCollision(session, (*it), session->x + ATTACK1_POINT_X, session->y + ATTACK1_POINT_Y))
 					{
 						// 데미지 메시지 생성. 모두에게 보내기
-						(*it)->hp -= 5;
+						(*it)->hp -= 1;
 						Damage msgDamage;
 						msgDamage.AttackID = session->id;
 						msgDamage.DamageID = (*it)->id;
@@ -615,8 +658,10 @@ void ProcessMessage(Session* session)
 
 				// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
 				// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
-				if (abs(msgAttack2Request.x - session->x) > MOVE_CHARACTER_PER_FRAME * 2 || abs(msgAttack2Request.y - session->y) > MOVE_CHARACTER_PER_FRAME * 2)
+				if (abs(msgAttack2Request.x - session->x) > RANGE_MOVE_ERROR || abs(msgAttack2Request.y - session->y) > RANGE_MOVE_ERROR)
 				{
+					DebugPrint("[Disconnect Client -> Client Attack2Request Error] ID: %d, Direction: %d, X: %d, Y: %d, x-diff: %d, y-diff: %d\n",
+						session->id, msgAttack2Request.direction, msgAttack2Request.x, msgAttack2Request.y, abs(msgAttack2Request.x - session->x), abs(msgAttack2Request.y - session->y));
 					session->del = true;
 					return;
 				}
@@ -638,10 +683,10 @@ void ProcessMessage(Session* session)
 				// 충돌체크
 				for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
 				{
-					if (CheckCollision(session, (*it), session->x + ATTACK2_POINT_X, session->y + ATTACK2_POINT_Y))
+					if (session->id != (*it)->id && CheckCollision(session, (*it), session->x + ATTACK2_POINT_X, session->y + ATTACK2_POINT_Y))
 					{
 						// 데미지 메시지 생성. 모두에게 보내기
-						(*it)->hp -= 5;
+						(*it)->hp -= 2;
 						Damage msgDamage;
 						msgDamage.AttackID = session->id;
 						msgDamage.DamageID = (*it)->id;
@@ -674,8 +719,10 @@ void ProcessMessage(Session* session)
 
 				// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
 				// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
-				if (abs(msgAttack3Request.x - session->x) > MOVE_CHARACTER_PER_FRAME * 2 || abs(msgAttack3Request.y - session->y) > MOVE_CHARACTER_PER_FRAME * 2)
+				if (abs(msgAttack3Request.x - session->x) > RANGE_MOVE_ERROR || abs(msgAttack3Request.y - session->y) > RANGE_MOVE_ERROR)
 				{
+					DebugPrint("[Disconnect Client -> Client Attack3Request Error] ID: %d, Direction: %d, X: %d, Y: %d, x-diff: %d, y-diff: %d\n",
+						session->id, msgAttack3Request.direction, msgAttack3Request.x, msgAttack3Request.y, abs(msgAttack3Request.x - session->x), abs(msgAttack3Request.y - session->y));
 					session->del = true;
 					return;
 				}
@@ -696,10 +743,10 @@ void ProcessMessage(Session* session)
 				// 충돌체크
 				for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
 				{
-					if (CheckCollision(session, (*it), session->x + ATTACK3_POINT_X, session->y + ATTACK3_POINT_Y))
+					if (session->id != (*it)->id && CheckCollision(session, (*it), session->x + ATTACK3_POINT_X, session->y + ATTACK3_POINT_Y))
 					{
 						// 데미지 메시지 생성. 모두에게 보내기
-						(*it)->hp -= 5;
+						(*it)->hp -= 3;
 						Damage msgDamage;
 						msgDamage.AttackID = session->id;
 						msgDamage.DamageID = (*it)->id;

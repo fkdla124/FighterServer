@@ -8,6 +8,7 @@
 
 struct MessageHeader
 {
+	char packetCode;
 	char len;
 	char type;
 };
@@ -23,8 +24,8 @@ struct CreatePlayer
 {
 	int id;
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 	int hp;
 };
 
@@ -32,9 +33,9 @@ struct CreatePlayer
 struct CreateOther
 {
 	int id;
-	int direction;
-	unsigned short x;
-	unsigned short y;
+	char direction;
+	short x;
+	short y;
 	int hp;
 };
 
@@ -56,8 +57,8 @@ struct MoveStart
 
 	// 목적지 기반 이동 동기화에선 안 넣는게 정석 구현.
 	// 지금은 목적지(더미) 기반 이동 동기화가 아님!!
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 // type = 11, RES
@@ -66,16 +67,16 @@ struct MoveStartOther
 	int id;
 	char direction;
 
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 // type = 12, REQ
 struct MoveStop
 {
-	int direction;
-	unsigned short x;
-	unsigned short y;
+	char direction;
+	short x;
+	short y;
 };
 
 // type = 13, RES
@@ -83,8 +84,8 @@ struct MoveStopOther
 {
 	int id;
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -97,8 +98,8 @@ struct MoveStopOther
 struct Attack1Request
 {
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 // type = 21, RES
@@ -106,16 +107,16 @@ struct Attack1Response
 {
 	int id;
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 // type = 22, REQ
 struct Attack2Request
 {
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 // type = 23, RES
@@ -123,16 +124,16 @@ struct Attack2Response
 {
 	int id;
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 // type = 24, REQ
 struct Attack3Request
 {
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 // type = 25, RES
@@ -140,8 +141,8 @@ struct Attack3Response
 {
 	int id;
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	short x;
+	short y;
 };
 
 // type = 30, RES

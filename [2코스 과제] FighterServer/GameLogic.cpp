@@ -18,32 +18,56 @@ void GameLogic()
 			switch ((*it)->direction)
 			{
 				case PACKET_MOVE_DIR_DD: // ↓
-					(*it)->y = min((*it)->y + MOVE_CHARACTER_PER_FRAME, MAP_MAX_Y);
+					if ((*it)->y + MOVE_CHARACTER_PER_FRAME_Y >= RANGE_MOVE_BOTTOM)
+						break;
+
+					(*it)->y += MOVE_CHARACTER_PER_FRAME_Y;
 					break;
 				case PACKET_MOVE_DIR_RD: // ↘
-					(*it)->x = min((*it)->x + MOVE_CHARACTER_PER_FRAME, MAP_MAX_X);
-					(*it)->y = min((*it)->y + MOVE_CHARACTER_PER_FRAME, MAP_MAX_Y);
+					if ((*it)->y + MOVE_CHARACTER_PER_FRAME_Y >= RANGE_MOVE_BOTTOM || (*it)->x + MOVE_CHARACTER_PER_FRAME_X >= RANGE_MOVE_RIGHT)
+						break;
+
+					(*it)->x += MOVE_CHARACTER_PER_FRAME_X;
+					(*it)->y += MOVE_CHARACTER_PER_FRAME_Y;
 					break;
 				case PACKET_MOVE_DIR_RR: // →
-					(*it)->x = min((*it)->x + MOVE_CHARACTER_PER_FRAME, MAP_MAX_X);
+					if ((*it)->x + MOVE_CHARACTER_PER_FRAME_X >= RANGE_MOVE_RIGHT)
+						break;
+
+					(*it)->x += MOVE_CHARACTER_PER_FRAME_X;
 					break;
 				case PACKET_MOVE_DIR_RU: // ↗
-					(*it)->x = min((*it)->x + MOVE_CHARACTER_PER_FRAME, MAP_MAX_X);
-					(*it)->y = max((*it)->y - MOVE_CHARACTER_PER_FRAME, 0);
+					if ((*it)->y - MOVE_CHARACTER_PER_FRAME_Y <= RANGE_MOVE_TOP || (*it)->x + MOVE_CHARACTER_PER_FRAME_X >= RANGE_MOVE_RIGHT)
+						break;
+
+					(*it)->x += MOVE_CHARACTER_PER_FRAME_X;
+					(*it)->y -= MOVE_CHARACTER_PER_FRAME_Y;
 					break;
 				case PACKET_MOVE_DIR_UU: // ↑
-					(*it)->y = max((*it)->y - MOVE_CHARACTER_PER_FRAME, 0);
+					if ((*it)->y - MOVE_CHARACTER_PER_FRAME_Y <= RANGE_MOVE_TOP)
+						break;
+
+					(*it)->y -= MOVE_CHARACTER_PER_FRAME_Y;
 					break;
 				case PACKET_MOVE_DIR_LU: // ↖
-					(*it)->x = max((*it)->x - MOVE_CHARACTER_PER_FRAME, 0);
-					(*it)->y = min((*it)->y + MOVE_CHARACTER_PER_FRAME, MAP_MAX_Y);
+					if ((*it)->y - MOVE_CHARACTER_PER_FRAME_Y <= RANGE_MOVE_TOP || (*it)->x - MOVE_CHARACTER_PER_FRAME_X <= RANGE_MOVE_LEFT)
+						break;
+
+					(*it)->x -= MOVE_CHARACTER_PER_FRAME_X;
+					(*it)->y -= MOVE_CHARACTER_PER_FRAME_Y;
 					break;
 				case PACKET_MOVE_DIR_LL: // ←
-					(*it)->x = max((*it)->x - MOVE_CHARACTER_PER_FRAME, 0);
+					if ((*it)->x - MOVE_CHARACTER_PER_FRAME_X <= RANGE_MOVE_LEFT)
+						break;
+
+					(*it)->x -= MOVE_CHARACTER_PER_FRAME_X;
 					break;
 				case PACKET_MOVE_DIR_LD: // ↙
-					(*it)->x = max((*it)->x - MOVE_CHARACTER_PER_FRAME, 0);
-					(*it)->y = max((*it)->y - MOVE_CHARACTER_PER_FRAME, 0);
+					if ((*it)->y + MOVE_CHARACTER_PER_FRAME_Y >= RANGE_MOVE_BOTTOM || (*it)->x - MOVE_CHARACTER_PER_FRAME_X <= RANGE_MOVE_LEFT)
+						break;
+
+					(*it)->x -= MOVE_CHARACTER_PER_FRAME_X;
+					(*it)->y += MOVE_CHARACTER_PER_FRAME_Y;
 					break;
 			}
 
