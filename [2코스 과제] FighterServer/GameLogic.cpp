@@ -1,10 +1,10 @@
 #include <cstdio>
 
-#include "GameLogic.h"
 #include "Network.h"
 #include "List.h"
 #include "Session.h"
 #include "PacketDefine.h"
+#include "Define.h"
 #include "Debug.h"
 
 // #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -73,14 +73,5 @@ void GameLogic()
 
 			DebugPrint("ID: %d, Direction: %d, X: %d, Y: %d\n", (*it)->id, (*it)->direction, (*it)->x, (*it)->y);
 		}
-
-		clock_t currentTick = clock();
-
-		(*it)->attack1Cooldown += currentTick - (*it)->attack1BaseTick;
-		(*it)->attack2Cooldown += currentTick - (*it)->attack2BaseTick;
-		(*it)->attack3Cooldown += currentTick - (*it)->attack3BaseTick;
-		(*it)->attack1BaseTick = currentTick;
-		(*it)->attack2BaseTick = currentTick;
-		(*it)->attack3BaseTick = currentTick;
 	}
 }

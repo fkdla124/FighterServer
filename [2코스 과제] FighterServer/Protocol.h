@@ -148,11 +148,27 @@ struct Attack3Response
 // type = 30, RES
 struct Damage
 {
-	int AttackID; // 공격자
-	int DamageID; // 피해자
-	char DamageHP; // 피해자 남은 HP
+	int attackID; // 공격자
+	int damageID; // 피해자
+	char damageHP; // 피해자 남은 HP
 };
 
 /////////////////////////////////////////////////////////////////////////////////
 
 #pragma pack(pop)
+
+// 패킷 생성 함수
+void mpCreatePlayer(MessageHeader* header, CreatePlayer* msg, int id, char direction, float x, float y, int hp);
+void mpCreateOther(MessageHeader* header, CreateOther* msg, int id, char direction, float x, float y, int hp);
+void mpDeletePlayer(MessageHeader* header, DeletePlayer* msg, int id);
+void mpMoveStart(MessageHeader* header, MoveStart* msg, char direction, float x, float y);
+void mpMoveStartOther(MessageHeader* header, MoveStartOther* msg, int id, char direction, float x, float y);
+void mpMoveStop(MessageHeader* header, MoveStop* msg, char direction, float x, float y);
+void mpMoveStopOther(MessageHeader* header, MoveStopOther* msg, int id, char direction, float x, float y);
+void mpAttack1Request(MessageHeader* header, Attack1Request* msg, char direction, float x, float y);
+void mpAttack1Response(MessageHeader* header, Attack1Response* msg, int id, char direction, float x, float y);
+void mpAttack2Request(MessageHeader* header, Attack2Request* msg, char direction, float x, float y);
+void mpAttack2Response(MessageHeader* header, Attack2Response* msg, int id, char direction, float x, float y);
+void mpAttack3Request(MessageHeader* header, Attack3Request* msg, char direction, float x, float y);
+void mpAttack3Response(MessageHeader* header, Attack3Response* msg, int id, char direction, float x, float y);
+void mpDamage(MessageHeader* header, Damage* msg, int attackID, int damageID, int damageHP);

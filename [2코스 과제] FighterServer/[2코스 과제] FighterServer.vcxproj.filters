@@ -39,6 +39,9 @@
     <ClCompile Include="GameLogic.cpp">
       <Filter>소스 파일\GameLogic</Filter>
     </ClCompile>
+    <ClCompile Include="Protocol.cpp">
+      <Filter>소스 파일\Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="List.h">
@@ -69,6 +72,9 @@
       <Filter>소스 파일\Network</Filter>
     </ClInclude>
     <ClInclude Include="Debug.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Define.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
   </ItemGroup>

@@ -142,10 +142,12 @@
     <ClCompile Include="FrameControl.cpp" />
     <ClCompile Include="GameLogic.cpp" />
     <ClCompile Include="Network.cpp" />
+    <ClCompile Include="Protocol.cpp" />
     <ClCompile Include="Server.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Debug.h" />
+    <ClInclude Include="Define.h" />
     <ClInclude Include="FrameControl.h" />
     <ClInclude Include="List.h" />
     <ClInclude Include="GameLogic.h" />

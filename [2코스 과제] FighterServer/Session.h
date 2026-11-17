@@ -1,31 +1,56 @@
 #pragma once
 
-#include "Network.h"
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+
 #include "RingBuffer.h"
+#include "PacketDefine.h"
+#include "Define.h"
 #include <ctime>
+
+extern int idCount;
 
 struct Session
 {
 	bool del;
 
 	SOCKET sock;
-	RingBuffer sendRingBuf{10 * 1024};
+	RingBuffer sendRingBuf{ 10 * 1024 };
 	RingBuffer recvRingBuf;
 
 	SOCKADDR_IN addr;
 
 	int id;
 	int hp;
+
+	// 이동 방향 (8방향)
 	char direction;
 	unsigned short x;
 	unsigned short y;
 
+	// 지금 이동중인가?
 	bool move;
 
-	clock_t attack1BaseTick;
-	clock_t attack2BaseTick;
-	clock_t attack3BaseTick;
-	clock_t attack1Cooldown;
-	clock_t attack2Cooldown;
-	clock_t attack3Cooldown;
+	// timeGetTime() 직전 공격 틱. 공격 쿨타임에 사용.
+	unsigned int lastAttackTick;
+	// 직전 공격의 애니메이션 시간
+	short lastAttackDuration;
+
+	// 시점 방향 (오른쪽, 왼쪽 두방향)
+	char facing;
+
+	Session(SOCKET sock, SOCKADDR_IN addr) : sock(sock), addr(addr)
+	{
+		del = false;
+		move = false;
+		id = idCount++;
+		hp = 100;
+		direction = PACKET_MOVE_DIR_RR;
+		x = rand() % 441 + 100; // 스폰좌표 100 ~ 540 맵 최대 X=640
+		y = rand() % 281 + 100; // 스폰좌표 100 ~ 380 맵 최대 Y=480
+		lastAttackTick = 0;
+		lastAttackDuration = ATTACK_TIME_TOLERANCE;
+		facing = PACKET_MOVE_DIR_RR;
+	}
 };
