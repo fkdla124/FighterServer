@@ -368,23 +368,42 @@ void ProcessMessage(Session* session)
 
 	while (1)
 	{
+		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
+
+		DebugPrint("헤더검사()\n");
 		// 최소한 헤더는 받았는가?
 		if (session->recvRingBuf.size() < sizeof(MessageHeader))
 			break;
 
+		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
+		DebugPrint("peek()\n");
+
 		MessageHeader header;
 		session->recvRingBuf.peek((char*)&header, sizeof(header));
+		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
+
+		DebugPrint("패킷검사\n");
 
 		// 최소한 헤더 + 메시지 받았는가?
 		if (session->recvRingBuf.size() < sizeof(header) + header.len)
 			break;
 
+		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
+		DebugPrint("MoveFront()\n");
+
 		// 헤더 pop
 		session->recvRingBuf.MoveFront(sizeof(header));
+
+		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
+
+		DebugPrint("pop()\n");
 
 		// 페이로드 pop
 		char msg[32];
 		session->recvRingBuf.pop(msg, header.len);
+
+		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
+		DebugPrint("메시지처리()\n");
 
 		switch (header.type)
 		{
@@ -764,9 +783,10 @@ void HandleMoveStop(Session* session, char* msg)
 void HandleAttack1Request(Session* session, char* msg)
 {
 	// 지난 공격의 쿨타임이 지나지 않았다면 이번패킷은 무시하고 다음메시지 처리
-	if (timeGetTime() - session->lastAttackTick <= session->lastAttackDuration - ATTACK_TIME_TOLERANCE)
+	unsigned int attackTickDiff = timeGetTime() - session->lastAttackTick;
+	if (attackTickDiff <= session->lastAttackDuration - ATTACK_TIME_TOLERANCE)
 	{
-		session->recvRingBuf.MoveFront(sizeof(Attack1Request));
+		DebugPrint("[Attack1 Tolerance] lastAttackTick: %d, lastAttackDuration: %d, ATTACK_TIME_TOLERANCE: %d, attackTickDiff: %d\n", session->lastAttackTick, session->lastAttackDuration, ATTACK_TIME_TOLERANCE, attackTickDiff);
 		return;
 	}
 
@@ -839,9 +859,10 @@ void HandleAttack1Request(Session* session, char* msg)
 void HandleAttack2Request(Session* session, char* msg)
 {
 	// 지난 공격의 쿨타임이 지나지 않았다면 이번패킷은 무시하고 다음메시지 처리
-	if (timeGetTime() - session->lastAttackTick <= session->lastAttackDuration - ATTACK_TIME_TOLERANCE)
+	unsigned int attackTickDiff = timeGetTime() - session->lastAttackTick;
+	if (attackTickDiff <= session->lastAttackDuration - ATTACK_TIME_TOLERANCE)
 	{
-		session->recvRingBuf.MoveFront(sizeof(Attack2Request));
+		DebugPrint("[Attack2 Tolerance] lastAttackTick: %d, lastAttackDuration: %d, ATTACK_TIME_TOLERANCE: %d, attackTickDiff: %d\n", session->lastAttackTick, session->lastAttackDuration, ATTACK_TIME_TOLERANCE, attackTickDiff);
 		return;
 	}
 
@@ -915,9 +936,10 @@ void HandleAttack2Request(Session* session, char* msg)
 void HandleAttack3Request(Session* session, char* msg)
 {
 	// 지난 공격의 쿨타임이 지나지 않았다면 이번패킷은 무시하고 다음메시지 처리
-	if (timeGetTime() - session->lastAttackTick <= session->lastAttackDuration - ATTACK_TIME_TOLERANCE)
+	unsigned int attackTickDiff = timeGetTime() - session->lastAttackTick;
+	if (attackTickDiff <= session->lastAttackDuration - ATTACK_TIME_TOLERANCE)
 	{
-		session->recvRingBuf.MoveFront(sizeof(Attack3Request));
+		DebugPrint("[Attack3 Tolerance] lastAttackTick: %d, lastAttackDuration: %d, ATTACK_TIME_TOLERANCE: %d, attackTickDiff: %d\n", session->lastAttackTick, session->lastAttackDuration, ATTACK_TIME_TOLERANCE, attackTickDiff);
 		return;
 	}
 

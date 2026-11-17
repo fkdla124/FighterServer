@@ -38,7 +38,7 @@
 // 허용해줄 공격 쿨타임 오차.
 // 공격 메시지 수신시 이전 수신과 현재 수신의 간격이 (ATTACK_ANIMATION_DURATION - ATTACK_TIME_TOLERANCE) 보다 빠르다면 무시.
 // 따로 카운팅해서 로그남기고 연결끊기 뭐 이런 거는 안 했음.
-#define ATTACK_TIME_TOLERANCE 20
+#define ATTACK_TIME_TOLERANCE 60
 
 
 // 공격 데미지
