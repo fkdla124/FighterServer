@@ -26,8 +26,8 @@ struct Session
 
 	// 이동 방향 (8방향)
 	char direction;
-	unsigned short x;
-	unsigned short y;
+	float x;
+	float y;
 
 	// 지금 이동중인가?
 	bool move;
@@ -47,8 +47,8 @@ struct Session
 		id = idCount++;
 		hp = 100;
 		direction = PACKET_MOVE_DIR_RR;
-		x = rand() % 441 + 100; // 스폰좌표 100 ~ 540 맵 최대 X=640
-		y = rand() % 281 + 100; // 스폰좌표 100 ~ 380 맵 최대 Y=480
+		x = (float)(rand() % 441 + 100); // 스폰좌표 100 ~ 540 맵 최대 X=640
+		y = (float)(rand() % 281 + 100); // 스폰좌표 100 ~ 380 맵 최대 Y=480
 		lastAttackTick = 0;
 		lastAttackDuration = ATTACK_TIME_TOLERANCE;
 		facing = PACKET_MOVE_DIR_RR;

@@ -1,4 +1,4 @@
-#include <windows.h>
+﻿#include <windows.h>
 #include <cstdio>
 #include <time.h>
 
@@ -8,39 +8,43 @@
 // 전역 데이터
 
 // 50fps
-#define FRAMETIME (CLOCKS_PER_SEC / 50)
+// #define FRAMETIME (CLOCKS_PER_SEC / 50) 	// ※ FPS 제한 삭제. 네트워크 처리를 최대한 빨리 돌리기위함.
 
 // fps 제어용 틱
-clock_t startFrameTick = clock();
+// clock_t startFrameTick = clock(); 	// ※ FPS 제한 삭제. 네트워크 처리를 최대한 빨리 돌리기위함.
 
 // fps 출력용 틱
-clock_t fpsCountTick = clock();
-int fpsCount = 0;
+unsigned int fpsCountTick = timeGetTime();
+int logicFpsCount = 0;
+int networkFpsCount = 0;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void FPS()
+void DisplayFPS()
 {
 	// FPS Display
-	fpsCount++;
-	clock_t elapsedFpsCountTick = clock() - fpsCountTick;
+	unsigned int elapsedFpsCountTick = timeGetTime() - fpsCountTick;
 	if (elapsedFpsCountTick > CLOCKS_PER_SEC)
 	{
 		fpsCountTick += CLOCKS_PER_SEC;
 
-		WCHAR title[32];
-		swprintf_s(title, L"[Fighter Server] %dFPS", fpsCount);
-		fpsCount = 0;
+		WCHAR title[64];
+		swprintf_s(title, L"[Fighter Server] LogicFPS: %d, NetworkFPS: %d", logicFpsCount, networkFpsCount);
+		logicFpsCount = 0;
+		networkFpsCount = 0;
 
 		SetConsoleTitle(title);
 	}
 
-	// FPS Control
-	clock_t elapsedFrameTime = clock() - startFrameTick;
-	startFrameTick += FRAMETIME;
 
-	if (elapsedFrameTime < FRAMETIME)
-	{
-		Sleep(FRAMETIME - elapsedFrameTime);
-	}
+
+	
+	// FPS Control
+	//clock_t elapsedFrameTime = clock() - startFrameTick;
+	//startFrameTick += FRAMETIME;
+
+	//if (elapsedFrameTime < FRAMETIME)						// ※ FPS 제한 삭제. 네트워크 처리를 최대한 빨리 돌리기위함.
+	//{
+	//	Sleep(FRAMETIME - elapsedFrameTime);
+	//}
 }

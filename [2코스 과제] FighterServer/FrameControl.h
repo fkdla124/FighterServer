@@ -1,3 +1,6 @@
 #pragma once
 
-void FPS();
+extern int logicFpsCount;
+extern int networkFpsCount;
+
+void DisplayFPS();

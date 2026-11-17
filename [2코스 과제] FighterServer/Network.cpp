@@ -2,6 +2,7 @@
 #include <cmath>
 #include <ctime>
 
+#include "FrameControl.h"
 #include "Network.h"
 #include "RingBuffer.h"
 #include "List.h"
@@ -186,6 +187,9 @@ void StopServer()
 
 void Network()
 {
+	// 네트워크 FPS 표시용.
+	networkFpsCount++;
+
 	fd_set rset;
 	fd_set wset;
 	FD_ZERO(&rset);
@@ -277,7 +281,7 @@ void AcceptClient()
 
 		char acceptSessionIp[16];
 		InetNtopA(AF_INET, &acceptSession->addr.sin_addr, acceptSessionIp, sizeof(acceptSessionIp));
-		DebugPrint("[Client Accept %s:%d] id: %d, direction: %d, facing: %d, x: %d, y: %d\n"
+		DebugPrint("[Client Accept %s:%d] id: %d, direction: %d, facing: %d, X: %f, Y: %f\n"
 			, acceptSessionIp, acceptSession->addr.sin_port, acceptSession->id, acceptSession->direction, acceptSession->facing, acceptSession->x, acceptSession->y);
 
 		// 접속한 플레이어 생성 메시지
@@ -550,35 +554,35 @@ void SendUnicast(Session* session, MessageHeader& msgHeader, const T& msg)
 		case PACKET_RES_MOVE_START:
 		{
 			MoveStartOther* msgPtr = (MoveStartOther*)(&msg);
-			DebugPrint("[Server MoveStartOther] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_MOVE_START), Payload(id: %d, direction: %d, x: %d, y: %d)\n",
+			DebugPrint("[Server MoveStartOther] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_MOVE_START), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
 				session->id, (unsigned char)msgHeader.packetCode, msgHeader.len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 			break;
 		}
 		case PACKET_RES_MOVE_STOP:
 		{
 			MoveStopOther* msgPtr = (MoveStopOther*)(&msg);
-			DebugPrint("[Server MoveStopOther] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_MOVE_STOP), Payload(id: %d, direction: %d, x: %d, y: %d)\n",
+			DebugPrint("[Server MoveStopOther] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_MOVE_STOP), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
 				session->id, (unsigned char)msgHeader.packetCode, msgHeader.len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 			break;
 		}
 		case PACKET_RES_ATTACK1:
 		{
 			Attack1Response* msgPtr = (Attack1Response*)(&msg);
-			DebugPrint("[Server Attack1Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK1), Payload(id: %d, direction: %d, x: %d, y: %d)\n",
+			DebugPrint("[Server Attack1Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK1), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
 				session->id, (unsigned char)msgHeader.packetCode, msgHeader.len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 			break;
 		}
 		case PACKET_RES_ATTACK2:
 		{
 			Attack2Response* msgPtr = (Attack2Response*)(&msg);
-			DebugPrint("[Server Attack2Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK2), Payload(id: %d, direction: %d, x: %d, y: %d)\n",
+			DebugPrint("[Server Attack2Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK2), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
 				session->id, (unsigned char)msgHeader.packetCode, msgHeader.len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 			break;
 		}
 		case PACKET_RES_ATTACK3:
 		{
 			Attack3Response* msgPtr = (Attack3Response*)(&msg);
-			DebugPrint("[Server Attack3Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK3), Payload(id: %d, direction: %d, x: %d, y: %d)\n",
+			DebugPrint("[Server Attack3Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK3), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
 				session->id, (unsigned char)msgHeader.packetCode, msgHeader.len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 			break;
 		}
@@ -683,7 +687,7 @@ void HandleMoveStart(Session* session, char* msg)
 	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[MoveStart Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %d, Y: %d, X-diff: %d, Y-diff: %d\n",
+		DebugPrint("[MoveStart Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
@@ -708,7 +712,7 @@ void HandleMoveStart(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client MoveStart] SessionID: %d, Direction: %d, Facing(server): %d, X: %d, Y: %d\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client MoveStart] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	MessageHeader msgHeaderMoveStartOther;
 	MoveStartOther msgMoveStartOther;
@@ -724,7 +728,7 @@ void HandleMoveStop(Session* session, char* msg)
 	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[!!! ERROR !!! Client MoveStop Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %d, Y: %d, X-diff: %d, Y-diff: %d\n",
+		DebugPrint("[!!! ERROR !!! Client MoveStop Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		session->del = true;
 		return;
@@ -749,7 +753,7 @@ void HandleMoveStop(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client MoveStop] SessionID: %d, Direction: %d, Facing(server): %d, X: %d, Y: %d\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client MoveStop] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	MessageHeader msgHeaderMoveStopOther;
 	MoveStopOther msgMoveStopOther;
@@ -776,7 +780,7 @@ void HandleAttack1Request(Session* session, char* msg)
 	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[!!! ERROR !!! Client Attack1Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %d, Y: %d, X-diff: %d, Y-diff: %d\n",
+		DebugPrint("[!!! ERROR !!! Client Attack1Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
@@ -800,7 +804,7 @@ void HandleAttack1Request(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client Attack1Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %d, Y: %d\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client Attack1Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	MessageHeader msgAttack1ResponseHeader;
 	Attack1Response msgAttack1Response;
@@ -851,7 +855,7 @@ void HandleAttack2Request(Session* session, char* msg)
 	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[!!! ERROR !!! Client Attack2Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %d, Y: %d, X-diff: %d, Y-diff: %d\n",
+		DebugPrint("[!!! ERROR !!! Client Attack2Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
@@ -875,7 +879,7 @@ void HandleAttack2Request(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client Attack2Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %d, Y: %d\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client Attack2Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	// 공격액션 다른 클라에게 브로드캐스트
 	MessageHeader msgAttack2ResponseHeader;
@@ -927,7 +931,7 @@ void HandleAttack3Request(Session* session, char* msg)
 	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[!!! ERROR !!! Client Attack3Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %d, Y: %d, X-diff: %d, Y-diff: %d\n",
+		DebugPrint("[!!! ERROR !!! Client Attack3Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
@@ -951,7 +955,7 @@ void HandleAttack3Request(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client Attack3Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %d, Y: %d\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client Attack3Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	MessageHeader msgAttack3ResponseHeader;
 	Attack3Response msgAttack3Response;
