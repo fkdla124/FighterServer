@@ -555,6 +555,7 @@ void SendUnicast(Session* session, MessageHeader& msgHeader, const T& msg)
 	}
 
 	// 디버깅용 출력
+	#ifdef DEBUG_PRINT
 	switch (msgHeader.type)
 	{
 		case PACKET_RES_MOVE_START:
@@ -600,6 +601,7 @@ void SendUnicast(Session* session, MessageHeader& msgHeader, const T& msg)
 			break;
 		}
 	}
+	#endif
 }
 
 template <typename T>
