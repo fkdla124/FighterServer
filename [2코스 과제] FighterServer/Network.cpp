@@ -545,8 +545,8 @@ void SendUnicast(Session* session, MessageHeader& msgHeader, const T& msg)
 		fwrite(bom, 1, 2, fp);
 
 		fwprintf(fp, L"RingBuffer Full error. FILE: %s, LINE: %d, recvSessionID: %d \n", __FILEW__, __LINE__, session->id);
-		fwprintf(fp, L"RingBuffer Capacity: %d\n", (int)(session->sendRingBuf.capacity()));
-		fwprintf(fp, L"RingBuffer Size: %d\n", session->sendRingBuf.size());
+		fwprintf(fp, L"RingBuffer Capacity: %zu\n", session->sendRingBuf.capacity());
+		fwprintf(fp, L"RingBuffer Size: %zu\n", session->sendRingBuf.size());
 		fwprintf(fp, L"Push MsgLen: %d\n", (int)(sizeof(msgBuffer)));
 		fwprintf(fp, L"returnValuePush: %d\n", returnValuePush);
 		fwprintf(fp, L"MsgType = %d\n", msgHeader.type);
@@ -556,8 +556,8 @@ void SendUnicast(Session* session, MessageHeader& msgHeader, const T& msg)
 		// 지연삭제 마킹 및 연결끊기. SO_LINGER {0, 0} RST 전송
 		DisconnectSession(session);
 
-		printf("[!!!Error!!!] SendUnicast() -> session->sendRingBuf.push() error. capacity: %d, size: %d, pushSize: %d, return: %d\n",
-			session->sendRingBuf.capacity(), session->sendRingBuf.size(), (int)sizeof(msgBuffer), returnValuePush);
+		printf("[!!!Error!!!] SendUnicast() -> session->sendRingBuf.push() error. capacity: %zu, size: %zu, pushSize: %zu, return: %d\n",
+			session->sendRingBuf.capacity(), session->sendRingBuf.size(), sizeof(msgBuffer), returnValuePush);
 	}
 
 	// 디버깅용 출력

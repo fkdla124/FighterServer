@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // 프레임당 이동 칸
 #define MOVE_CHARACTER_PER_FRAME_X 3

@@ -36,7 +36,7 @@ struct Session
 	// timeGetTime() 직전 공격 틱. 공격 쿨타임에 사용.
 	unsigned int lastAttackTick;
 	// 직전 공격의 애니메이션 시간
-	short lastAttackDuration;
+	unsigned int lastAttackDuration;
 
 	// 시점 방향 (오른쪽, 왼쪽 두방향)
 	char facing;
