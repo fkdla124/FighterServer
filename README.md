@@ -10,15 +10,11 @@
 * while()문 FPS 제한이 없음. Network() 처리를 최대한 빠르게 하기 위함.
 * 다만 GameLogic() 함수는 호출 자체는 매 루프마다 하지만 실제 작동은 1초에 50번만 가능하도록 조건에 맞춰 조기리턴하여 50 LogicFPS를 제한
 ```cpp
-bool isServerRunning = true;
-
 int main()
 {
-	linger _linger = { 1, 0 };
-	ULONG nonBlocking = 1;
-	StartServer(_linger, nonBlocking);
+	StartServer();
 
-  // Server Main Loop
+  	// Server Main Loop
 	while (isServerRunning)
 	{
 		Network();
