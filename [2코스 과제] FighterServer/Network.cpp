@@ -266,6 +266,13 @@ void AcceptClient()
 			Sleep(INFINITE);
 		}
 
+		// 세션 63개까지 가능. 그 뒤로는 closesocket()
+		if (sessionList.size() >= FD_SETSIZE - 1)
+		{
+			closesocket(acceptSocket);
+			return;
+		}
+
 		NetInfoIncreaseAcceptCount();
 
 		// 세션정보 추가
@@ -380,6 +387,10 @@ void ProcessMessage(Session* session)
 		// 페이로드 pop
 		char msg[32];
 		session->recvRingBuf.pop(msg, header.len);
+
+		// 패킷코드 0x89아니면 처리안함.
+		if (header.packetCode != (char)0x89)
+			continue;
 
 		switch (header.type)
 		{

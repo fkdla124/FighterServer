@@ -1,7 +1,7 @@
 #include "Protocol.h"
 #include "PacketDefine.h"
 
-void mpCreatePlayer(MessageHeader* header, CreatePlayer* msg, int id, char direction, float x, float y, int hp)
+void mpCreatePlayer(MessageHeader* header, CreatePlayer* msg, int id, char direction, float x, float y, char hp)
 {
 	header->packetCode = 0x89;
 	header->len = sizeof(CreatePlayer);
@@ -14,7 +14,7 @@ void mpCreatePlayer(MessageHeader* header, CreatePlayer* msg, int id, char direc
 	msg->hp = hp;
 }
 
-void mpCreateOther(MessageHeader* header, CreateOther* msg, int id, char direction, float x, float y, int hp)
+void mpCreateOther(MessageHeader* header, CreateOther* msg, int id, char direction, float x, float y, char hp)
 {
 	header->packetCode = 0x89;
 	header->len = sizeof(CreateOther);
@@ -151,7 +151,7 @@ void mpAttack3Response(MessageHeader* header, Attack3Response* msg, int id, char
 	msg->y = y;
 }
 
-void mpDamage(MessageHeader* header, Damage* msg, int attackID, int damageID, int damageHP)
+void mpDamage(MessageHeader* header, Damage* msg, int attackID, int damageID, char damageHP)
 {
 	header->packetCode = 0x89;
 	header->len = sizeof(Damage);

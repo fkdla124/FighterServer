@@ -4,4 +4,5 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="[2코스 과제] FighterServer/[2코스 과제] FighterServer.vcxproj" Id="3a16833f-d27c-4fe4-abe9-0819b0406113" />
+  <Project Path="더미클라/더미클라.vcxproj" Id="10d9f085-e5c7-4807-9222-0cc7ff1b866b" />
 </Solution>
