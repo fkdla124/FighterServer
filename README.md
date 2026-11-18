@@ -41,7 +41,8 @@ int main()
 }
 ```
 
-# Network()
+# Network() 
+* FPS 제한없이 최대한 빠르게 반복
 * 공격 충돌처리 네트워크에서 바로 처리
 ```cpp
 void Network()
@@ -92,7 +93,9 @@ void Network()
 }
 ```
 
-# GameLogic()
+# GameLogic() 
+* 50FPS로 클라와 동일하게 제어.
+* 로직프레임이 50 아래로 떨어지더라도 시간 기반 이동으로 동기화.
 ```cpp
 void GameLogic()
 {
