@@ -139,6 +139,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DisplayNetworkInfo.cpp" />
     <ClCompile Include="FrameControl.cpp" />
     <ClCompile Include="GameLogic.cpp" />
     <ClCompile Include="Network.cpp" />
@@ -148,6 +149,7 @@
   <ItemGroup>
     <ClInclude Include="Debug.h" />
     <ClInclude Include="Define.h" />
+    <ClInclude Include="DisplayNetworkInfo.h" />
     <ClInclude Include="FrameControl.h" />
     <ClInclude Include="List.h" />
     <ClInclude Include="GameLogic.h" />

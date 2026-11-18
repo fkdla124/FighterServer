@@ -25,6 +25,9 @@
     <Filter Include="소스 파일\FrameControl">
       <UniqueIdentifier>{a33fa305-a01b-4a9d-bd91-988c0de16607}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Debug">
+      <UniqueIdentifier>{19b8397a-d685-4d9c-90bf-63d606987013}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Network.cpp">
@@ -42,6 +45,9 @@
     <ClCompile Include="Protocol.cpp">
       <Filter>소스 파일\Network</Filter>
     </ClCompile>
+    <ClCompile Include="DisplayNetworkInfo.cpp">
+      <Filter>소스 파일\Debug</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="List.h">
@@ -56,9 +62,6 @@
     <ClInclude Include="Protocol.h">
       <Filter>소스 파일\Network</Filter>
     </ClInclude>
-    <ClInclude Include="SocketErrorcode.h">
-      <Filter>소스 파일\Network</Filter>
-    </ClInclude>
     <ClInclude Include="FrameControl.h">
       <Filter>소스 파일\FrameControl</Filter>
     </ClInclude>
@@ -71,11 +74,17 @@
     <ClInclude Include="Session.h">
       <Filter>소스 파일\Network</Filter>
     </ClInclude>
-    <ClInclude Include="Debug.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
     <ClInclude Include="Define.h">
       <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="SocketErrorcode.h">
+      <Filter>소스 파일\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="Debug.h">
+      <Filter>소스 파일\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayNetworkInfo.h">
+      <Filter>소스 파일\Debug</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

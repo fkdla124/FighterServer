@@ -1,0 +1,24 @@
+#pragma once
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// netInfo extern
+
+// 초당 accept() 횟수
+extern int netInfoAcceptCount;
+
+// 현재 세션 수
+// sessionList.size();
+
+// 초당 송수신 바이트 recv, send
+extern int netInfoRecvBytes;
+extern int netInfoSendBytes;
+
+// 초당 메시지 처리 횟수 -> 초당 ProcessMessage() 호출 횟수
+extern int netInfoMessageCount;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// 1초마다 위 정보들 콘솔 출력
+void DisplayNetworkInfo();
+
+

@@ -42,6 +42,6 @@
 
 
 // 공격 데미지
-#define ATTACK1_DAMAGE 1
-#define ATTACK2_DAMAGE 2
-#define ATTACK3_DAMAGE 3
+#define ATTACK1_DAMAGE 2
+#define ATTACK2_DAMAGE 3
+#define ATTACK3_DAMAGE 4

@@ -33,6 +33,8 @@ void GameLogic()
 	logicFpsCount++;
 	DisplayFPS();
 
+	NetInfoPrint();
+
 	for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
 	{
 		if ((*it)->move == true)

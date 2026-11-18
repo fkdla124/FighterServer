@@ -17,23 +17,6 @@
 #include <windows.h>
 #pragma comment(lib, "winmm.lib")
 
-// todo
-// 
-//
-// 네트워크 처리는 프레임과 관계없이 최대부하로 돌게끔 하고 로직처리만 50fps 나오게끔. 시간기반으로 short 좌표 말고 float 좌표로 계산
-// 100% 프레임의존으로 간다 -> 1번의 게임 루프에 네트워크처리 + 50fps에 도달하려면 필요한 로직() 반복
-// 시간 의존으로 간다 -> 1번의 게임 루프에 네트워크처리 + 로직처리 한 번씩만. 로직()에서 시간을 계산해 그만큼 float로 이동처리. 1초에 x=150 y=100 이니까 이거로 계산
-
-// 나는 시간의존으로 간다.
-
-// 디버깅프린트 테스트 완료 후 없애고나서 이걸 출력하면 됨. (디버그프린트 디파인 안 할 시에)
-// 1. 지금 세션개수
-// 2. 초당 메시지 몇건 송수신하는가, 바이트 처리량
-// 3. 초당 accept() 횟수
-
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 전역 데이터
 
@@ -56,7 +39,7 @@ void StopServer();
 
 // 네트워크
 void Network();
-void SelectSocketEvents(fd_set* rset, fd_set* wset);
+int SelectSocketEvents(fd_set* rset, fd_set* wset);
 void AcceptClient();
 void RecvMessage(Session* session);
 void ProcessMessage(Session* session);
@@ -196,13 +179,16 @@ void Network()
 	FD_ZERO(&wset);
 
 	// select 처리
-	SelectSocketEvents(&rset, &wset);
+	int selectCount = SelectSocketEvents(&rset, &wset);
 
 	// accept
-	if (FD_ISSET(listenSocket, &rset))
+	if (selectCount > 0 && FD_ISSET(listenSocket, &rset))
+	{
 		AcceptClient();
+		--selectCount;
+	}
 
-	for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
+	for (List<Session*>::Iterator it = sessionList.begin(); (selectCount > 0 && it != sessionList.end()); ++it)
 	{
 		// rset 처리
 		if (FD_ISSET((*it)->sock, &rset))
@@ -212,6 +198,9 @@ void Network()
 
 			// 수신링버퍼 메시지 처리
 			ProcessMessage((*it));
+
+			// 처리할 세션이 더 이상 없다면 나머지 세션은 확인 X
+			--selectCount;
 		}
 
 		// wset 처리
@@ -219,6 +208,9 @@ void Network()
 		{
 			// 송신링버퍼 플러쉬
 			FlushSendBuffer((*it));
+
+			// 처리할 세션이 더 이상 없다면 나머지 세션은 확인 X
+			--selectCount;
 		}
 	}
 
@@ -226,7 +218,7 @@ void Network()
 	SweepMarkedSession();
 }
 
-void SelectSocketEvents(fd_set* rset, fd_set* wset)
+int SelectSocketEvents(fd_set* rset, fd_set* wset)
 {
 	// listenSocket rset
 	FD_SET(listenSocket, rset);
@@ -251,13 +243,15 @@ void SelectSocketEvents(fd_set* rset, fd_set* wset)
 		printf("select() error. %d\n", errorCodeSelect);
 		Sleep(INFINITE);
 	}
+
+	return returnValueSelect;
 }
 
 void AcceptClient()
 {
 	DebugPrint("\n================================AcceptClient()====================================\n");
 
-	// 현재 프레임에 쌓인 연결정보를 모두 빼내기.
+	// 백로그 큐에 쌓인 연결정보를 모두 빼내기.
 	while (1)
 	{
 		SOCKADDR_IN acceptAddr = { 0, };
@@ -275,10 +269,13 @@ void AcceptClient()
 			Sleep(INFINITE);
 		}
 
+		NetInfoIncreaseAcceptCount();
+
 		// 세션정보 추가
 		Session* acceptSession = new Session(acceptSocket, acceptAddr);
 		sessionList.push_back(acceptSession);
 
+		// 디버깅 정보 프린트
 		char acceptSessionIp[16];
 		InetNtopA(AF_INET, &acceptSession->addr.sin_addr, acceptSessionIp, sizeof(acceptSessionIp));
 		DebugPrint("[Client Accept %s:%d] id: %d, direction: %d, facing: %d, X: %f, Y: %f\n"
@@ -355,6 +352,7 @@ void RecvMessage(Session* session)
 
 	DebugPrint("WSARecv() success.. SessionID: %d, returnValueWSARecv: %d, bytesReceived: %d\n", session->id, returnValueWSARecv, bytesReceived);
 
+	NetInfoIncreaseRecvBytes(bytesReceived);
 	session->recvRingBuf.MoveRear(bytesReceived);
 }
 
@@ -368,67 +366,53 @@ void ProcessMessage(Session* session)
 
 	while (1)
 	{
-		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
-
-		DebugPrint("헤더검사()\n");
 		// 최소한 헤더는 받았는가?
 		if (session->recvRingBuf.size() < sizeof(MessageHeader))
 			break;
 
-		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
-		DebugPrint("peek()\n");
-
 		MessageHeader header;
 		session->recvRingBuf.peek((char*)&header, sizeof(header));
-		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
-
-		DebugPrint("패킷검사\n");
 
 		// 최소한 헤더 + 메시지 받았는가?
 		if (session->recvRingBuf.size() < sizeof(header) + header.len)
 			break;
 
-		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
-		DebugPrint("MoveFront()\n");
-
 		// 헤더 pop
 		session->recvRingBuf.MoveFront(sizeof(header));
-
-		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
-
-		DebugPrint("pop()\n");
 
 		// 페이로드 pop
 		char msg[32];
 		session->recvRingBuf.pop(msg, header.len);
 
-		DebugPrint("session->recvRingBuf.size(): %d\n", (int)(session->recvRingBuf.size()));
-		DebugPrint("메시지처리()\n");
-
 		switch (header.type)
 		{
 			case PACKET_REQ_MOVE_START:
 			{
+				NetInfoIncreaseMessageCount();
 				HandleMoveStart(session, msg);
 				break;
 			}
 			case PACKET_REQ_MOVE_STOP:
 			{
+				NetInfoIncreaseMessageCount();
 				HandleMoveStop(session, msg);
 				break;
 			}
 			case PACKET_REQ_ATTACK1:
 			{
+				NetInfoIncreaseMessageCount();
 				HandleAttack1Request(session, msg);
 				break;
 			}
 			case PACKET_REQ_ATTACK2:
 			{
+				NetInfoIncreaseMessageCount();
 				HandleAttack2Request(session, msg);
 				break;
 			}
 			case PACKET_REQ_ATTACK3:
 			{
+				NetInfoIncreaseMessageCount();
 				HandleAttack3Request(session, msg);
 				break;
 			}
@@ -494,6 +478,7 @@ void FlushSendBuffer(Session* session)
 	}
 
 	// 일부만 보내져도 괜찮음. Front를 그만큼 옮김.
+	NetInfoIncreaseSendBytes(bytesSent);
 	session->sendRingBuf.MoveFront(bytesSent);
 }
 
@@ -702,12 +687,20 @@ void HandleMoveStart(Session* session, char* msg)
 {
 	MoveStart* msgPtr = (MoveStart*)msg;
 
-	// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
-	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
+	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[MoveStart Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
+		DisconnectSession(session);
+		return;
+	}
+
+	// 방향 0~7 이외가 오면 연결끊기.
+	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
+	{
+		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 		DisconnectSession(session);
 		return;
 	}
@@ -743,13 +736,21 @@ void HandleMoveStop(Session* session, char* msg)
 {
 	MoveStop* msgPtr = (MoveStop*)msg;
 
-	// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
-	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
+	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[!!! ERROR !!! Client MoveStop Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
-		session->del = true;
+		DisconnectSession(session);
+		return;
+	}
+
+	// 방향 0~7 이외가 오면 연결끊기.
+	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
+	{
+		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+		DisconnectSession(session);
 		return;
 	}
 
@@ -796,12 +797,20 @@ void HandleAttack1Request(Session* session, char* msg)
 
 	Attack1Request* msgPtr = (Attack1Request*)msg;
 
-	// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
-	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
+	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[!!! ERROR !!! Client Attack1Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
+		DisconnectSession(session);
+		return;
+	}
+
+	// 방향 0~7 이외가 오면 연결끊기.
+	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
+	{
+		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 		DisconnectSession(session);
 		return;
 	}
@@ -872,12 +881,20 @@ void HandleAttack2Request(Session* session, char* msg)
 
 	Attack2Request* msgPtr = (Attack2Request*)msg;
 
-	// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
-	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
+	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[!!! ERROR !!! Client Attack2Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
+		DisconnectSession(session);
+		return;
+	}
+
+	// 방향 0~7 이외가 오면 연결끊기.
+	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
+	{
+		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 		DisconnectSession(session);
 		return;
 	}
@@ -949,12 +966,20 @@ void HandleAttack3Request(Session* session, char* msg)
 
 	Attack3Request* msgPtr = (Attack3Request*)msg;
 
-	// 만약 클라의 좌표가 서버의 좌표와 두 프레임치(최소 40ms) 넘게 차이나면 연결 끊어버리기.
-	// 네트워크 딜레이가 10ms 안쪽이라고 가정하고 만들었기 때문에 두프레임 넘게 차이나는 일이 거의 없을 것임.
+	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[!!! ERROR !!! Client Attack3Request Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
+		DisconnectSession(session);
+		return;
+	}
+
+	// 방향 0~7 이외가 오면 연결끊기.
+	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
+	{
+		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 		DisconnectSession(session);
 		return;
 	}
