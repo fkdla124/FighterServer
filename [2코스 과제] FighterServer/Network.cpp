@@ -313,13 +313,17 @@ void AcceptClient()
 
 void RecvMessage(Session* session)
 {
+	// 수신링버퍼에 공간이 없으면 나감.
+	if (session->recvRingBuf.full())
+		return;
+
 	DebugPrint("\n\n================================RecvMessage()====================================\n");
 	// WSARecv() -> 링버퍼
 	WSABUF wsaBuf[2];
 	wsaBuf[0].buf = session->recvRingBuf.GetRear();
 	wsaBuf[0].len = session->recvRingBuf.DirectPushSize();
 	wsaBuf[1].buf = session->recvRingBuf.GetBuffer();
-	wsaBuf[1].len = static_cast<ULONG>(session->recvRingBuf.GetFront() - wsaBuf[1].buf);
+	wsaBuf[1].len = static_cast<ULONG>(session->recvRingBuf.space() - session->recvRingBuf.DirectPushSize());
 
 	DWORD bytesReceived;
 	DWORD flags = 0;
@@ -432,24 +436,14 @@ void FlushSendBuffer(Session* session)
 {
 	DebugPrint("================================FlushSendBuffer()====================================\n");
 
-	DWORD bufCount = 0;
-
-	// 일단 버퍼 하나 넣음.
 	WSABUF wsaBuf[2];
 	wsaBuf[0].buf = session->sendRingBuf.GetFront();
 	wsaBuf[0].len = session->sendRingBuf.DirectPopSize();
-	bufCount++;
-
-	// 보낼게 더있으면 하나 더 넣음.
-	if (session->sendRingBuf.DirectPopSize() < session->sendRingBuf.size())
-	{
-		wsaBuf[1].buf = session->sendRingBuf.GetBuffer();
-		wsaBuf[1].len = static_cast<ULONG>(session->sendRingBuf.GetRear() - wsaBuf[1].buf);
-		bufCount++;
-	}
+	wsaBuf[1].buf = session->sendRingBuf.GetBuffer();
+	wsaBuf[1].len = static_cast<ULONG>(session->sendRingBuf.size() - session->sendRingBuf.DirectPopSize());
 
 	DWORD bytesSent;
-	returnValueWSASend = WSASend(session->sock, wsaBuf, bufCount, &bytesSent, NULL, NULL, NULL);
+	returnValueWSASend = WSASend(session->sock, wsaBuf, 2, &bytesSent, NULL, NULL, NULL);
 	if (returnValueWSASend == SOCKET_ERROR)
 	{
 		errorCodeWSASend = WSAGetLastError();
