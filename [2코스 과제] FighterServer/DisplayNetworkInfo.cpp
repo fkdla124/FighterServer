@@ -37,7 +37,7 @@ void DisplayNetworkInfo()
 	// base 갱신
 	networkInfoTick = timeGetTime();
 
-	printf("[NETINFO] Recv: %5d B | Send: %5d B | Msg: %5d | Accept: %5d | Session: %5zu\n", netInfoRecvBytes, netInfoSendBytes, netInfoMessageCount, netInfoAcceptCount, sessionList.size());
+	printf("[NETINFO] Recv: %7d B | Send: %7d B | Msg: %5d | Accept: %5d | Session: %5zu\n", netInfoRecvBytes, netInfoSendBytes, netInfoMessageCount, netInfoAcceptCount, sessionList.size());
 
 	// 출력 후 초기화.
 	netInfoAcceptCount = 0;
