@@ -1,4 +1,4 @@
-#include <cstdio>
+﻿#include <cstdio>
 
 #include "Network.h"
 #include "List.h"
@@ -10,29 +10,34 @@
 
 // #define min(a, b) ((a) < (b) ? (a) : (b))
 
-unsigned int gameLogicTick = timeGetTime();
+// deltaTime 계산 기준 틱
+static unsigned int gameLogicTick = timeGetTime();
+
+// ms 단위 deltaTime
+static unsigned int deltaTime;
+
+// ms단위 이동속도
+static float moveSpeedX = MOVE_SPEED_X_PER_MILLISECONDS;
+static float moveSpeedY = MOVE_SPEED_Y_PER_MILLISECONDS;
+
+static void MovePlayer(Session* session, char directionX, char directionY);
 
 void GameLogic()
 {
-	// ms 단위 deltaTime
-	unsigned int deltaTime = timeGetTime() - gameLogicTick;
+	// 이번 로직 deltaTime 계산
+	deltaTime = timeGetTime() - gameLogicTick;
 
-	// fps 리밋에 맞게 제한
+	// Logic FPS 제한
 	if (deltaTime < (1000 / GAME_LOGIC_FPS_LIMIT))
 		return;
 
 	// 기준틱 갱신
 	gameLogicTick = timeGetTime();
 
-	// ms단위 이동속도
-	float moveSpeedX = MOVE_SPEED_X_PER_MILLISECONDS;
-	float moveSpeedY = MOVE_SPEED_Y_PER_MILLISECONDS;
-
 	// ※ FPS 제한 삭제. 네트워크 처리를 최대한 빨리 돌리기위함.
 	// 현재는 FPS 출력만하는중.
 	logicFpsCount++;
 	DisplayFPS();
-
 	NetInfoPrint();
 
 	for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
@@ -42,60 +47,44 @@ void GameLogic()
 			switch ((*it)->direction)
 			{
 				case PACKET_MOVE_DIR_DD: // ↓
-					if ((*it)->y + deltaTime * moveSpeedY >= RANGE_MOVE_BOTTOM)
-						break;
-
-					(*it)->y += deltaTime * moveSpeedY;
+					MovePlayer((*it), 0, 1);
 					break;
 				case PACKET_MOVE_DIR_RD: // ↘
-					if ((*it)->y + deltaTime * moveSpeedY >= RANGE_MOVE_BOTTOM || (*it)->x + deltaTime * moveSpeedX >= RANGE_MOVE_RIGHT)
-						break;
-
-					(*it)->x += deltaTime * moveSpeedX;
-					(*it)->y += deltaTime * moveSpeedY;
+					MovePlayer((*it), 1, 1);
 					break;
 				case PACKET_MOVE_DIR_RR: // →
-					if ((*it)->x + deltaTime * moveSpeedX >= RANGE_MOVE_RIGHT)
-						break;
-
-					(*it)->x += deltaTime * moveSpeedX;
+					MovePlayer((*it), 1, 0);
 					break;
 				case PACKET_MOVE_DIR_RU: // ↗
-					if ((*it)->y - deltaTime * moveSpeedY <= RANGE_MOVE_TOP || (*it)->x + deltaTime * moveSpeedX >= RANGE_MOVE_RIGHT)
-						break;
-
-					(*it)->x += deltaTime * moveSpeedX;
-					(*it)->y -= deltaTime * moveSpeedY;
+					MovePlayer((*it), 1, -1);
 					break;
 				case PACKET_MOVE_DIR_UU: // ↑
-					if ((*it)->y - deltaTime * moveSpeedY <= RANGE_MOVE_TOP)
-						break;
-
-					(*it)->y -= deltaTime * moveSpeedY;
+					MovePlayer((*it), 0, -1);
 					break;
 				case PACKET_MOVE_DIR_LU: // ↖
-					if ((*it)->y - deltaTime * moveSpeedY <= RANGE_MOVE_TOP || (*it)->x - deltaTime * moveSpeedX <= RANGE_MOVE_LEFT)
-						break;
-
-					(*it)->x -= deltaTime * moveSpeedX;
-					(*it)->y -= deltaTime * moveSpeedY;
+					MovePlayer((*it), -1, -1);
 					break;
 				case PACKET_MOVE_DIR_LL: // ←
-					if ((*it)->x - deltaTime * moveSpeedX <= RANGE_MOVE_LEFT)
-						break;
-
-					(*it)->x -= deltaTime * moveSpeedX;
+					MovePlayer((*it), -1, 0);
 					break;
 				case PACKET_MOVE_DIR_LD: // ↙
-					if ((*it)->y + deltaTime * moveSpeedY >= RANGE_MOVE_BOTTOM || (*it)->x - deltaTime * moveSpeedX <= RANGE_MOVE_LEFT)
-						break;
-
-					(*it)->x -= deltaTime * moveSpeedX;
-					(*it)->y += deltaTime * moveSpeedY;
+					MovePlayer((*it), -1, 1);
 					break;
 			}
 
 			DebugPrint("ID: %d, Direction: %d, X: %f, Y: %f\n", (*it)->id, (*it)->direction, (*it)->x, (*it)->y);
 		}
 	}
+}
+
+// direction: -1, 0, 1
+static void MovePlayer(Session* session, char directionX, char directionY)
+{
+	float nextX = session->x + deltaTime * moveSpeedX * directionX;
+	float nextY = session->y + deltaTime * moveSpeedY * directionY;
+	if (nextX <= RANGE_MOVE_LEFT || nextX >= RANGE_MOVE_RIGHT || nextY <= RANGE_MOVE_TOP || nextY >= RANGE_MOVE_BOTTOM)
+		return;
+
+	session->x = nextX;
+	session->y = nextY;
 }

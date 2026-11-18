@@ -21,12 +21,9 @@
 // 전역 데이터
 
 #define SERVER_PORT 5000
-SOCKET listenSocket;
+static SOCKET listenSocket;
 
 List<Session*> sessionList;
-
-// 세션별 할당 ID. 0부터 +1씩
-int idCount = 0;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -39,32 +36,32 @@ void StopServer();
 
 // 네트워크
 void Network();
-int SelectSocketEvents(fd_set* rset, fd_set* wset);
-void AcceptClient();
-void RecvMessage(Session* session);
-void ProcessMessage(Session* session);
-void FlushSendBuffer(Session* session);
+static int SelectSocketEvents(fd_set* rset, fd_set* wset);
+static void AcceptClient();
+static void RecvMessage(Session* session);
+static void ProcessMessage(Session* session);
+static void FlushSendBuffer(Session* session);
 
 // 클라 연결종료 관련
-void DisconnectSession(Session* session);	// 삭제 마킹, 플레이어 제거 메시지 보내기
-void SweepMarkedSession();					// 마킹된 세션 세션리스트에서 삭제.
+static void DisconnectSession(Session* session);	// 삭제 마킹, 플레이어 제거 메시지 보내기
+static void SweepMarkedSession();					// 마킹된 세션 세션리스트에서 삭제.
 
 // 링버퍼 메시지 복사. 실제 send()는 FlushSendBuffer()
 template <typename T>
-void SendUnicast(Session* session, MessageHeader& msgHeader, const T& msg);
+static void SendUnicast(Session* session, MessageHeader& msgHeader, const T& msg);
 template <typename T>
-void SendBroadcast(Session* exceptSession, MessageHeader& msgHeader, const T& msg);
+static void SendBroadcast(Session* exceptSession, MessageHeader& msgHeader, const T& msg);
 
 
 // 공격 충돌처리
-bool CheckCollision(char attackType, char attackerFacing, float attackerX, float attackerY, float targetX, float targetY);
+static bool CheckCollision(char attackType, char attackerFacing, float attackerX, float attackerY, float targetX, float targetY);
 
 // 메시지 실제 처리 함수
-void HandleMoveStart(Session* session, char* msg);
-void HandleMoveStop(Session* session, char* msg);
-void HandleAttack1Request(Session* session, char* msg);
-void HandleAttack2Request(Session* session, char* msg);
-void HandleAttack3Request(Session* session, char* msg);
+static void HandleMoveStart(Session* session, char* msg);
+static void HandleMoveStop(Session* session, char* msg);
+static void HandleAttack1Request(Session* session, char* msg);
+static void HandleAttack2Request(Session* session, char* msg);
+static void HandleAttack3Request(Session* session, char* msg);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

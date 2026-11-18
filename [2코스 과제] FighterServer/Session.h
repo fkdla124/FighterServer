@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -9,7 +9,8 @@
 #include "Define.h"
 #include <ctime>
 
-extern int idCount;
+// 세션별 할당 ID. 0부터 +1씩
+static inline int idCount = 0;
 
 struct Session
 {
