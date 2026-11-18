@@ -93,7 +93,7 @@ void Network()
 ```cpp
 void GameLogic()
 {
-  // 이번 로직 deltaTime 계산
+  	// 이번 로직 deltaTime 계산
 	deltaTime = timeGetTime() - gameLogicTick;
 
 	// Logic FPS 제한
@@ -134,8 +134,6 @@ void GameLogic()
 					MovePlayer((*it), -1, 1);
 					break;
 			}
-
-			DebugPrint("ID: %d, Direction: %d, X: %f, Y: %f\n", (*it)->id, (*it)->direction, (*it)->x, (*it)->y);
 		}
 	}
 }
