@@ -361,6 +361,3 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/더미클라/더미클라.vcxproj
-/더미클라/더미클라.vcxproj.filters
-/더미클라/main.cpp
