@@ -395,9 +395,12 @@ void ProcessMessage(Session* session)
 		char msg[32];
 		session->recvRingBuf.pop(msg, header.len);
 
-		// 패킷코드 0x89아니면 처리안함.
+		// 패킷코드 0x89아니면 연결 끊기
 		if (header.packetCode != (char)0x89)
-			continue;
+		{
+			DisconnectSession(session);
+			return;
+		}
 
 		switch (header.type)
 		{
@@ -431,12 +434,20 @@ void ProcessMessage(Session* session)
 				HandleAttack3Request(session, msg);
 				break;
 			}
+			default:
+			{
+				DisconnectSession(session);
+				return;
+			}
 		}
 	}
 }
 
 void FlushSendBuffer(Session* session)
 {
+	if (session->del == true)
+		return;
+
 	DebugPrint("================================FlushSendBuffer()====================================\n");
 
 	WSABUF wsaBuf[2];
