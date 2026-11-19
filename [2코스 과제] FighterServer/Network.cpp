@@ -254,8 +254,6 @@ int SelectSocketEvents(fd_set* rset, fd_set* wset)
 
 void AcceptClient()
 {
-	DebugPrint("\n================================AcceptClient()====================================\n");
-
 	// 백로그 큐에 쌓인 연결정보를 모두 빼내기.
 	while (1)
 	{
@@ -290,7 +288,7 @@ void AcceptClient()
 		// 디버깅 정보 프린트
 		char acceptSessionIp[16];
 		InetNtopA(AF_INET, &acceptSession->addr.sin_addr, acceptSessionIp, sizeof(acceptSessionIp));
-		DebugPrint("[Client Accept %s:%d] id: %d, direction: %d, facing: %d, X: %f, Y: %f\n"
+		DebugPrint("[Client Accept %s:%d] ID: %d, Direction: %d, Facing: %d, X: %f, Y: %f\n"
 			, acceptSessionIp, acceptSession->addr.sin_port, acceptSession->id, acceptSession->direction, acceptSession->facing, acceptSession->x, acceptSession->y);
 
 		// 접속한 플레이어 생성 메시지
@@ -321,11 +319,11 @@ void AcceptClient()
 
 void RecvMessage(Session* session)
 {
-	// 수신링버퍼에 공간이 없으면 나감.
+	// 수신링버퍼에 공간이 없으면 나감. 
+	// 로그 남기면 좋을듯. 메시지 크기가 굉장히 작고, 보내는 양도 많지 않아서 거의 없는 상황이기는 함.
 	if (session->recvRingBuf.full())
 		return;
 
-	DebugPrint("\n\n================================RecvMessage()====================================\n");
 	// WSARecv() -> 링버퍼
 	WSABUF wsaBuf[2];
 	wsaBuf[0].buf = session->recvRingBuf.GetRear();
@@ -342,7 +340,7 @@ void RecvMessage(Session* session)
 
 		if (errorCodeWSARecv == WSAECONNRESET)
 		{
-			// RST 전송으로 끊어진 경우
+			// 클라측 RST 전송으로 끊어진 경우
 			DisconnectSession(session);
 			return;
 		}
@@ -353,6 +351,8 @@ void RecvMessage(Session* session)
 			return;
 		}
 		else if (errorCodeWSARecv == WSAEWOULDBLOCK)
+			// select()로 TCP 수신버퍼에 받을 게 있고, 링버퍼 공간도 여유있을 때 들어왔음.
+			// 그런데도 WOULDBLOCK이면 운영체제단에서 할 수 없다는 의미이니 다음으로 미룸.
 			return;
 
 		// 그 외 에러
@@ -361,12 +361,10 @@ void RecvMessage(Session* session)
 	}
 	else if (bytesReceived == 0)
 	{
-		// FIN 전송으로 끊어진 경우
+		// 클라측 FIN 전송으로 끊어진 경우
 		DisconnectSession(session);
 		return;
 	}
-
-	DebugPrint("WSARecv() success.. SessionID: %d, returnValueWSARecv: %d, bytesReceived: %d\n", session->id, returnValueWSARecv, bytesReceived);
 
 	NetInfoIncreaseRecvBytes(bytesReceived);
 	session->recvRingBuf.MoveRear(bytesReceived);
@@ -377,8 +375,6 @@ void ProcessMessage(Session* session)
 	// 마킹된 세션은 처리 X
 	if (session->del == true)
 		return;
-
-	DebugPrint("================================ProcessMessage()====================================\n");
 
 	while (1)
 	{
@@ -441,6 +437,8 @@ void ProcessMessage(Session* session)
 			}
 			default:
 			{
+				// 이상한 타입의 메시지. 연결끊기. 
+				// (실제라면 로그남기고 추척하는 방향도 존재함.)
 				DisconnectSession(session);
 				return;
 			}
@@ -452,8 +450,6 @@ void FlushSendBuffer(Session* session)
 {
 	if (session->del == true)
 		return;
-
-	DebugPrint("================================FlushSendBuffer()====================================\n");
 
 	WSABUF wsaBuf[2];
 	wsaBuf[0].buf = session->sendRingBuf.GetFront();
@@ -480,13 +476,12 @@ void FlushSendBuffer(Session* session)
 			return;
 		}
 		else if (errorCodeWSASend == WSAEWOULDBLOCK)
+			// TCP 송신버퍼가 꽉 찼거나, 운영체제단에서 지금은 할 수 없음.
 			return;
 
 		printf("WSASend() error. %d\n", errorCodeWSASend);
 		Sleep(INFINITE);
 	}
-
-	DebugPrint("WSASend() success.. SessionID: %d, returnValueWSASend: %d, sendBytes: %d\n", session->id, returnValueWSASend, bytesSent);
 
 	// 정말로 send() 함수가 보내기로한 len 이하로만 반활할까? 정말 msdn 문서와 동일할까?
 	if (bytesSent > session->sendRingBuf.size())
@@ -755,7 +750,7 @@ void HandleMoveStart(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client MoveStart] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client MoveStart] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	MessageHeader msgHeaderMoveStartOther;
 	MoveStartOther msgMoveStartOther;
@@ -805,7 +800,7 @@ void HandleMoveStop(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client MoveStop] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client MoveStop] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	MessageHeader msgHeaderMoveStopOther;
 	MoveStopOther msgMoveStopOther;
@@ -866,7 +861,7 @@ void HandleAttack1Request(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client Attack1Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client Attack1Request] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	MessageHeader msgAttack1ResponseHeader;
 	Attack1Response msgAttack1Response;
@@ -951,7 +946,7 @@ void HandleAttack2Request(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client Attack2Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client Attack2Request] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	// 공격액션 다른 클라에게 브로드캐스트
 	MessageHeader msgAttack2ResponseHeader;
@@ -1037,7 +1032,7 @@ void HandleAttack3Request(Session* session, char* msg)
 			break;
 	}
 
-	DebugPrint("[Client Attack3Request] SessionID: %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
+	DebugPrint("[Client Attack3Request] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 	MessageHeader msgAttack3ResponseHeader;
 	Attack3Response msgAttack3Response;
