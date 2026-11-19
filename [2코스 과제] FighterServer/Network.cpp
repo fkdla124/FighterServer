@@ -77,7 +77,7 @@ void StartServer(linger _linger, ULONG nonBlocking)
 
 	SetConsoleTitle(L"[Fighter Server]");
 
-	printf("===========================SERVER OPEN================================\n");
+	printf("===========================SERVER START================================\n");
 
 	// WSAStartup()
 	WSADATA wsa;
@@ -134,7 +134,7 @@ void StartServer(linger _linger, ULONG nonBlocking)
 		printf("bind() error. %d\n", errorCodeBind);
 		Sleep(INFINITE);
 	}
-	printf("bind() Success. IP: INADDR_ANY, Port: %d\n", SERVER_PORT);
+	printf("bind() Success. (IP: INADDR_ANY, Port: %d)\n", SERVER_PORT);
 
 	// listen()
 	returnValueListen = listen(listenSocket, SOMAXCONN);
@@ -154,9 +154,9 @@ void StartServer(linger _linger, ULONG nonBlocking)
 		printf("ioctlsocket() error. %d\n", errorCodeIoctlSocket);
 		Sleep(INFINITE);
 	}
-	printf("nonblocking socket change.\n");
+	printf("socket changed to non-blocking.\n");
 
-	printf("======================================================================\n");
+	printf("=======================================================================\n");
 
 	return;
 }
