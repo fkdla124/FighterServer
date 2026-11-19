@@ -384,6 +384,13 @@ void ProcessMessage(Session* session)
 		MessageHeader header;
 		session->recvRingBuf.peek((char*)&header, sizeof(header));
 
+		// 우리게임 메시지가 아님 or 우리게임 메시지 이지만 기대하는 프로토콜 규격에 안 맞는 메시지임
+		if (header.packetCode != (char)0x89 || header.len > PROCESS_MESSAGE_PAYLOAD_BUF_SIZE)
+		{
+			DisconnectSession(session);
+			return;
+		}
+
 		// 최소한 헤더 + 메시지 받았는가?
 		if (session->recvRingBuf.size() < sizeof(header) + header.len)
 			break;
@@ -392,15 +399,8 @@ void ProcessMessage(Session* session)
 		session->recvRingBuf.MoveFront(sizeof(header));
 
 		// 페이로드 pop
-		char msg[32];
+		char msg[PROCESS_MESSAGE_PAYLOAD_BUF_SIZE];
 		session->recvRingBuf.pop(msg, header.len);
-
-		// 패킷코드 0x89아니면 연결 끊기
-		if (header.packetCode != (char)0x89)
-		{
-			DisconnectSession(session);
-			return;
-		}
 
 		switch (header.type)
 		{

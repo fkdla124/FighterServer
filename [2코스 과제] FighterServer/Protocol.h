@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+// 우리게임의 페이로드를 넉넉히 수용할 수 있는 사이즈
+// (메시지 처리과정에서 링버퍼에서 페이로드를 스택 로컬버퍼에 pop() 합니다. 그 때 우리게임의 페이로드 크기를 고려한 적당히 널널한 로컬버퍼 사이즈입니다.)
+#define PROCESS_MESSAGE_PAYLOAD_BUF_SIZE 32
+
 // byte order
 #pragma pack(push, 1)
 
