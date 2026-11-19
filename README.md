@@ -9,15 +9,167 @@
 # 더미테스트 이미지 (AI로 만든 더미클라 + 내 서버)
 ![더미테스트 클라 이미지](./image/DummyTestImage.png)
 
-# 클라이언트 메시지
-### 🚶 이동
-1. 이동 시작
-2. 이동 정지
+# 📦 Message Protocol
+```cpp
+#pragma once
 
-### ⚔️ 공격
-1. 왼주먹
-2. 오른주먹
-3. 발차기
+// byte order
+#pragma pack(push, 1)
+
+/////////////////////////////////////////////////////////////////////////////////
+// Header
+
+struct MessageHeader
+{
+	char packetCode;
+	char len;
+	char type;
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////////
+// Player Create/Delete
+
+// type = 0, RES
+struct CreatePlayer
+{
+	int id;
+	char direction;
+	short x;
+	short y;
+	char hp;
+};
+
+// type = 1, RES
+struct CreateOther
+{
+	int id;
+	char direction;
+	short x;
+	short y;
+	char hp;
+};
+
+// type = 2, RES
+struct DeletePlayer
+{
+	int id;
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////
+// Move
+
+// type = 10, REQ
+struct MoveStart
+{
+	char direction;
+
+	// 목적지 기반 이동 동기화에선 안 넣는게 정석 구현.
+	// 지금은 목적지(더미) 기반 이동 동기화가 아님!!
+	short x;
+	short y;
+};
+
+// type = 11, RES
+struct MoveStartOther
+{
+	int id;
+	char direction;
+
+	short x;
+	short y;
+};
+
+// type = 12, REQ
+struct MoveStop
+{
+	char direction;
+	short x;
+	short y;
+};
+
+// type = 13, RES
+struct MoveStopOther
+{
+	int id;
+	char direction;
+	short x;
+	short y;
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////////
+// Attack
+
+// type = 20, REQ
+struct Attack1Request
+{
+	char direction;
+	short x;
+	short y;
+};
+
+// type = 21, RES
+struct Attack1Response
+{
+	int id;
+	char direction;
+	short x;
+	short y;
+};
+
+// type = 22, REQ
+struct Attack2Request
+{
+	char direction;
+	short x;
+	short y;
+};
+
+// type = 23, RES
+struct Attack2Response
+{
+	int id;
+	char direction;
+	short x;
+	short y;
+};
+
+// type = 24, REQ
+struct Attack3Request
+{
+	char direction;
+	short x;
+	short y;
+};
+
+// type = 25, RES
+struct Attack3Response
+{
+	int id;
+	char direction;
+	short x;
+	short y;
+};
+
+// type = 30, RES
+struct Damage
+{
+	int attackID; // 공격자
+	int damageID; // 피해자
+	char damageHP; // 피해자 남은 HP
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+
+#pragma pack(pop)
+```
 
 # main()
 * while()문 FPS 제한이 없음. Network() 처리를 최대한 빠르게 하기 위함.
@@ -41,7 +193,8 @@ int main()
 }
 ```
 
-# Network()
+# Network() 
+* FPS 제한없이 최대한 빠르게 반복
 * 공격 충돌처리 네트워크에서 바로 처리
 ```cpp
 void Network()
@@ -92,7 +245,9 @@ void Network()
 }
 ```
 
-# GameLogic()
+# GameLogic() 
+* 50FPS로 클라와 동일하게 제어.
+* 로직프레임이 50 아래로 떨어지더라도 시간 기반 이동으로 동기화.
 ```cpp
 void GameLogic()
 {
