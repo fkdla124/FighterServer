@@ -1,4 +1,6 @@
-﻿#include <cstdio>
+﻿#define FD_SETSIZE 65535
+
+#include <cstdio>
 #include <cmath>
 #include <ctime>
 
@@ -24,6 +26,9 @@
 static SOCKET listenSocket;
 
 List<Session*> sessionList;
+
+fd_set rset;
+fd_set wset;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -170,8 +175,6 @@ void Network()
 	// 네트워크 FPS 표시용.
 	networkFpsCount++;
 
-	fd_set rset;
-	fd_set wset;
 	FD_ZERO(&rset);
 	FD_ZERO(&wset);
 
@@ -489,10 +492,6 @@ void DisconnectSession(Session* session)
 	DebugPrint("[Delete Mark] ID: %d\n", session->id);
 
 	session->del = true;
-	MessageHeader msgDeletePlayerHeader;
-	DeletePlayer msgDeletePlayer;
-	mpDeletePlayer(&msgDeletePlayerHeader, &msgDeletePlayer, session->id);
-	SendBroadcast(session, msgDeletePlayerHeader, msgDeletePlayer);
 }
 
 void SweepMarkedSession()
@@ -502,7 +501,12 @@ void SweepMarkedSession()
 		if ((*it)->del == true)
 		{
 			DebugPrint("[Sweep Marked Session] ID: %d\n", (*it)->id);
+			MessageHeader msgDeletePlayerHeader;
+			DeletePlayer msgDeletePlayer;
+			mpDeletePlayer(&msgDeletePlayerHeader, &msgDeletePlayer, (*it)->id);
+			SendBroadcast((*it), msgDeletePlayerHeader, msgDeletePlayer);
 			closesocket((*it)->sock);
+			delete (*it);
 			it = sessionList.erase(it);
 		}
 		else
@@ -539,11 +543,17 @@ void SendUnicast(Session* session, MessageHeader& msgHeader, const T& msg)
 		fwrite(bom, 1, 2, fp);
 
 		fwprintf(fp, L"RingBuffer Full error. FILE: %s, LINE: %d, recvSessionID: %d \n", __FILEW__, __LINE__, session->id);
-		fwprintf(fp, L"RingBuffer Capacity: %zu\n", session->sendRingBuf.capacity());
-		fwprintf(fp, L"RingBuffer Size: %zu\n", session->sendRingBuf.size());
-		fwprintf(fp, L"Push MsgLen: %d\n", (int)(sizeof(msgBuffer)));
-		fwprintf(fp, L"returnValuePush: %d\n", returnValuePush);
-		fwprintf(fp, L"MsgType = %d\n", msgHeader.type);
+		fwprintf(fp, L"[!!!Error!!!] SendUnicast() -> session->sendRingBuf.push() error. capacity: %zu, size: %zu, pushSize: %zu, return: %d\n",
+			session->sendRingBuf.capacity(), session->sendRingBuf.size(), sizeof(msgBuffer), returnValuePush);
+
+		// 보내려고 했던 메시지 내용 출력
+		fwprintf(fp, L"msgBuffer -> [ ");
+		for (int i = 0; i < sizeof(msgBuffer); i++)
+		{
+			fwprintf(fp, L"%02X ", (unsigned char)msgBuffer[i]);
+		}
+		fwprintf(fp, L"]\n");
+
 		fclose(fp);
 		#pragma warning(default:6387 6328)
 
@@ -743,7 +753,7 @@ void HandleMoveStop(Session* session, char* msg)
 	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
 	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[MoveStop Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
@@ -752,7 +762,7 @@ void HandleMoveStop(Session* session, char* msg)
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
-		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+		DebugPrint("[MoveStop Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 		DisconnectSession(session);
 		return;

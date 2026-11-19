@@ -17,7 +17,7 @@ struct Session
 	bool del;
 
 	SOCKET sock;
-	RingBuffer sendRingBuf{ 10 * 1024 };
+	RingBuffer sendRingBuf{ 100 * 1024 };
 	RingBuffer recvRingBuf;
 
 	SOCKADDR_IN addr;

@@ -31,7 +31,7 @@
 static const char* DEFAULT_SERVER_IP = "127.0.0.1";
 static const int   DEFAULT_SERVER_PORT = 5000;
 
-static const int DUMMY_COUNT = 100;				// 더미 세션 수
+static const int DUMMY_COUNT = 5000;		// 더미 세션 수
 
 static const int ACTIVE_TIME_MIN_MS = 10000;	// 접속 후 행동 시간 (랜덤)
 static const int ACTIVE_TIME_MAX_MS = 20000;
