@@ -163,10 +163,15 @@ void StartServer(linger _linger, ULONG nonBlocking)
 
 void StopServer()
 {
-	closesocket(listenSocket);
-	sessionList.clear();
-	WSACleanup();
+	// 세션 동적할당 해제
+	for (auto session : sessionList)
+		delete session;
 
+	// 리스트 클리어
+	sessionList.clear();
+
+	closesocket(listenSocket);
+	WSACleanup();
 	timeEndPeriod(1);
 }
 
@@ -712,20 +717,21 @@ void HandleMoveStart(Session* session, char* msg)
 {
 	MoveStart* msgPtr = (MoveStart*)msg;
 
-	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
-	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
-	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
-			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
-		DisconnectSession(session);
-		return;
-	}
-
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
 		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+		DisconnectSession(session);
+		return;
+	}
+
+	// 만약 서버의 좌표와 50 넘게 차이나거나, 맵 밖이라면 연결 끊어버리기.
+	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
+		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
+	{
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
 	}
@@ -761,20 +767,21 @@ void HandleMoveStop(Session* session, char* msg)
 {
 	MoveStop* msgPtr = (MoveStop*)msg;
 
-	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
-	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
-	{
-		DebugPrint("[MoveStop Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
-			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
-		DisconnectSession(session);
-		return;
-	}
-
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
 		DebugPrint("[MoveStop Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+		DisconnectSession(session);
+		return;
+	}
+
+	// 만약 서버의 좌표와 50 넘게 차이나거나, 맵 밖이라면 연결 끊어버리기.
+	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
+		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
+	{
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
 	}
@@ -822,20 +829,21 @@ void HandleAttack1Request(Session* session, char* msg)
 
 	Attack1Request* msgPtr = (Attack1Request*)msg;
 
-	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
-	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
-	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
-			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
-		DisconnectSession(session);
-		return;
-	}
-
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
 		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+		DisconnectSession(session);
+		return;
+	}
+
+	// 만약 서버의 좌표와 50 넘게 차이나거나, 맵 밖이라면 연결 끊어버리기.
+	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
+		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
+	{
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
 	}
@@ -906,20 +914,21 @@ void HandleAttack2Request(Session* session, char* msg)
 
 	Attack2Request* msgPtr = (Attack2Request*)msg;
 
-	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
-	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
-	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
-			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
-		DisconnectSession(session);
-		return;
-	}
-
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
 		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+		DisconnectSession(session);
+		return;
+	}
+
+	// 만약 서버의 좌표와 50 넘게 차이나거나, 맵 밖이라면 연결 끊어버리기.
+	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
+		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
+	{
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
 	}
@@ -991,20 +1000,21 @@ void HandleAttack3Request(Session* session, char* msg)
 
 	Attack3Request* msgPtr = (Attack3Request*)msg;
 
-	// 만약 클라, 서버 좌표가 50 넘게 차이나면 연결 끊어버리기.
-	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR)
-	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
-			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
-		DisconnectSession(session);
-		return;
-	}
-
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
 		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+		DisconnectSession(session);
+		return;
+	}
+
+	// 만약 서버의 좌표와 50 넘게 차이나거나, 맵 밖이라면 연결 끊어버리기.
+	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
+		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
+	{
+		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
 	}
