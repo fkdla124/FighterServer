@@ -1,14 +1,14 @@
 ﻿// =====================================================================================
 // DummyClient.cpp  -  Fighter Server 더미 클라이언트 (단일 파일)
 //
-// - 더미 100개가 각자 독립적인 상태머신으로 동작 (싱글스레드, 논블로킹 소켓)
+// - 더미 N개가 각자 독립적인 상태머신으로 동작 (싱글스레드, 논블로킹 소켓)
 // - 각 더미: [접속 -> 10~20초 랜덤 행동(이동/공격1/2/3) -> 종료] 사이클을 무한 반복 (Ctrl+C로 종료)
 // - 서버가 끊은 세션도 휴식 후 처음부터 다시 사이클 시작
 // - 첫 접속 시점, 라운드 사이 휴식시간이 랜덤이라 접속중/행동중/종료중이 섞임
 // - 이동 시 x든 y든 범위를 벗어나면 좌표를 아예 변화시키지 않음 (서버 MovePlayer와 동일)
 //
 // 빌드: Visual Studio, Windows 콘솔 프로젝트. (ws2_32, winmm 은 pragma로 링크)
-// 실행: DummyClient.exe [서버IP] [포트]     (기본값 127.0.0.1 5000)
+// 실행: DummyClient.exe 실행 후 서버 IP / 포트 / 더미 개수 입력 (엔터만 치면 기본값 127.0.0.1 5000 300)
 // =====================================================================================
 
 #define NOMINMAX
@@ -31,7 +31,7 @@
 static const char* DEFAULT_SERVER_IP = "127.0.0.1";
 static const int   DEFAULT_SERVER_PORT = 5000;
 
-static const int DUMMY_COUNT = 64;	// 더미 세션 수
+static int DUMMY_COUNT = 300;			// 더미 세션 수 (시작 시 입력받음. 엔터만 치면 기본값)
 
 static const int ACTIVE_TIME_MIN_MS = 10000;	// 접속 후 행동 시간 (랜덤)
 static const int ACTIVE_TIME_MAX_MS = 20000;
@@ -783,12 +783,60 @@ static BOOL WINAPI ConsoleCtrlHandler(DWORD ctrlType)
 	return FALSE;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 시작 시 설정 입력. 그냥 엔터를 치면 기본값 사용.
+
+static void InputString(const char* prompt, const char* defaultValue, char* out, int outSize)
+{
+	char line[128];
+
+	printf("%s (기본 %s): ", prompt, defaultValue);
+	if (fgets(line, sizeof(line), stdin) == NULL)
+	{
+		strcpy_s(out, outSize, defaultValue);
+		return;
+	}
+
+	line[strcspn(line, "\r\n")] = '\0';
+	if (line[0] == '\0')
+		strcpy_s(out, outSize, defaultValue);
+	else
+		strcpy_s(out, outSize, line);
+}
+
+// min ~ max 범위의 정수를 입력받음. 범위 밖이거나 숫자가 아니면 다시 입력.
+static int InputInt(const char* prompt, int defaultValue, int minValue, int maxValue)
+{
+	char line[128];
+
+	while (true)
+	{
+		printf("%s (기본 %d): ", prompt, defaultValue);
+		if (fgets(line, sizeof(line), stdin) == NULL)
+			return defaultValue;
+
+		line[strcspn(line, "\r\n")] = '\0';
+		if (line[0] == '\0')
+			return defaultValue;
+
+		int value = atoi(line);
+		if (value >= minValue && value <= maxValue)
+			return value;
+
+		printf("  %d ~ %d 사이의 숫자를 입력하세요.\n", minValue, maxValue);
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
-	const char* serverIp = (argc >= 2) ? argv[1] : DEFAULT_SERVER_IP;
-	int serverPort = (argc >= 3) ? atoi(argv[2]) : DEFAULT_SERVER_PORT;
+	// 시작 시 입력받기 (엔터만 치면 기본값)
+	char serverIp[64];
+	InputString("서버 IP", DEFAULT_SERVER_IP, serverIp, sizeof(serverIp));
+	int serverPort = InputInt("서버 포트", DEFAULT_SERVER_PORT, 1, 65535);
+	DUMMY_COUNT = InputInt("더미 개수", DUMMY_COUNT, 1, 10000);
+	printf("\n");
 
 	timeBeginPeriod(1);
 
