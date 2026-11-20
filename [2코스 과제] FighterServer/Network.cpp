@@ -312,6 +312,14 @@ void AcceptClient()
 				CreateOther msgCreateOther;
 				mpCreateOther(&msgHeaderCreateOther, &msgCreateOther, (*it)->id, (*it)->direction, (*it)->x, (*it)->y, (*it)->hp);
 				SendUnicast(acceptSession, msgHeaderCreateOther, msgCreateOther);
+
+				if ((*it)->move == true)
+				{
+					MessageHeader msgHeaderMoveStartOther;
+					MoveStartOther msgMoveStartOther;
+					mpMoveStartOther(&msgHeaderMoveStartOther, &msgMoveStartOther, (*it)->id, (*it)->direction, (*it)->x, (*it)->y);
+					SendUnicast(acceptSession, msgHeaderMoveStartOther, msgMoveStartOther);
+				}
 			}
 		}
 	}
