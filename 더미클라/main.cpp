@@ -176,8 +176,8 @@ struct Dummy
 	// 서버가 알려준 내 캐릭터 정보 + 클라 시뮬레이션 좌표
 	int id = -1;
 	int hp = 0;
-	float x = 0;
-	float y = 0;
+	short x = 0;
+	short y = 0;
 	char direction = PACKET_MOVE_DIR_RR;	// 이동 방향 (8방향)
 	char facing = PACKET_MOVE_DIR_RR;		// 시점 (LL / RR)
 
@@ -298,8 +298,8 @@ static bool SendPosPacket(Dummy& d, DWORD now, char type, char direction)
 {
 	PosMsg msg;
 	msg.direction = direction;
-	msg.x = (short)d.x;
-	msg.y = (short)d.y;
+	msg.x = d.x;
+	msg.y = d.y;
 
 	if (QueuePacket(d, type, &msg, sizeof(msg)) == false)
 	{
@@ -502,8 +502,8 @@ static void UpdateFacing(Dummy& d, char dir)
 	}
 }
 
-// 서버 MovePlayer()와 같은 방식으로 좌표 계산.
-// 다음 좌표가 x든 y든 하나라도 범위를 벗어나면 좌표를 아예 변화시키지 않음.
+// 서버 MovePlayer()와 같은 방식으로 좌표 계산 (좌표는 short 정수).
+// 다음 좌표가 x든 y든 하나라도 경계와 같거나 벗어나면 좌표를 아예 변화시키지 않음.
 static void StepMove(Dummy& d, DWORD now, bool force)
 {
 	DWORD dt = now - d.lastSimTick;
@@ -517,14 +517,20 @@ static void StepMove(Dummy& d, DWORD now, bool force)
 	d.lastSimTick = now;
 
 	const DirVec& v = DIR_TABLE[(int)d.direction];
-	float nextX = d.x + dt * MOVE_SPEED_X_PER_MILLISECONDS * v.dx;
-	float nextY = d.y + dt * MOVE_SPEED_Y_PER_MILLISECONDS * v.dy;
 
+	// 이동량을 반올림해서 정수로 변환 (float 오차로 2.9999 -> 2 가 되는 것 방지)
+	int stepX = (int)(dt * MOVE_SPEED_X_PER_MILLISECONDS + 0.5f) * v.dx;
+	int stepY = (int)(dt * MOVE_SPEED_Y_PER_MILLISECONDS + 0.5f) * v.dy;
+
+	int nextX = (int)d.x + stepX;
+	int nextY = (int)d.y + stepY;
+
+	// 경계와 같거나 넘어가면 x, y 모두 아예 이동하지 않음
 	if (nextX <= RANGE_MOVE_LEFT || nextX >= RANGE_MOVE_RIGHT || nextY <= RANGE_MOVE_TOP || nextY >= RANGE_MOVE_BOTTOM)
 		return;
 
-	d.x = nextX;
-	d.y = nextY;
+	d.x = (short)nextX;
+	d.y = (short)nextY;
 }
 
 static void StopMove(Dummy& d, DWORD now)

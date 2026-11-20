@@ -3,7 +3,7 @@
 #include <cstdio>
 
 // 디버깅 정보 프린트 on/off
-// #define DEBUG_PRINT
+#define DEBUG_PRINT
 
 
 
@@ -18,7 +18,7 @@
 #include "DisplayNetworkInfo.h"
 
 // 네트워크 정보 프린트 on/off
-#define NETINFO_PRINT
+// #define NETINFO_PRINT
 
 #ifdef NETINFO_PRINT
 	#define NetInfoPrint() DisplayNetworkInfo()

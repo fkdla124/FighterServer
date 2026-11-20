@@ -72,7 +72,7 @@ void GameLogic()
 					break;
 			}
 
-			DebugPrint("SessionID: %d, Direction: %d, X: %f, Y: %f\n", (*it)->id, (*it)->direction, (*it)->x, (*it)->y);
+			// DebugPrint("SessionID: %d, Direction: %d, X: %f, Y: %f\n", (*it)->id, (*it)->direction, (*it)->x, (*it)->y);
 		}
 	}
 }

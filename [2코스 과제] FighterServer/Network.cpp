@@ -775,7 +775,7 @@ void HandleMoveStop(Session* session, char* msg)
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
 		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
 	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[MoveStop Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
@@ -827,7 +827,7 @@ void HandleAttack1Request(Session* session, char* msg)
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
-		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+		DebugPrint("[Attack1Request Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 		DisconnectSession(session);
 		return;
@@ -837,7 +837,7 @@ void HandleAttack1Request(Session* session, char* msg)
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
 		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
 	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[Attack1Request Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
@@ -912,7 +912,7 @@ void HandleAttack2Request(Session* session, char* msg)
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
-		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+		DebugPrint("[Attack2Request Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 		DisconnectSession(session);
 		return;
@@ -922,7 +922,7 @@ void HandleAttack2Request(Session* session, char* msg)
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
 		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
 	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[Attack2Request Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
@@ -998,7 +998,7 @@ void HandleAttack3Request(Session* session, char* msg)
 	// 방향 0~7 이외가 오면 연결끊기.
 	if (msgPtr->direction < PACKET_MOVE_DIR_LL || msgPtr->direction > PACKET_MOVE_DIR_LD)
 	{
-		DebugPrint("[MoveStart Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
+		DebugPrint("[Attack3Request Direction Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y);
 		DisconnectSession(session);
 		return;
@@ -1008,7 +1008,7 @@ void HandleAttack3Request(Session* session, char* msg)
 	if (abs(msgPtr->x - session->x) > RANGE_MOVE_ERROR || abs(msgPtr->y - session->y) > RANGE_MOVE_ERROR
 		|| msgPtr->x <= RANGE_MOVE_LEFT || msgPtr->x >= RANGE_MOVE_RIGHT || msgPtr->y <= RANGE_MOVE_TOP || msgPtr->y >= RANGE_MOVE_BOTTOM)
 	{
-		DebugPrint("[MoveStart Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
+		DebugPrint("[Attack3Request Position Error -> Disconnect Client] SessionID: %d, Direction: %d, X: %f, Y: %f, X-diff: %f, Y-diff: %f\n",
 			session->id, msgPtr->direction, msgPtr->x, msgPtr->y, abs(msgPtr->x - session->x), abs(msgPtr->y - session->y));
 		DisconnectSession(session);
 		return;
