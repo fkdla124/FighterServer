@@ -86,5 +86,8 @@
     <ClInclude Include="DisplayNetworkInfo.h">
       <Filter>소스 파일\Debug</Filter>
     </ClInclude>
+    <ClInclude Include="MsgBuf.h">
+      <Filter>소스 파일\자료구조</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

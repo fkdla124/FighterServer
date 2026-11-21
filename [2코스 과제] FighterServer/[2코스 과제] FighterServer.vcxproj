@@ -157,6 +157,7 @@
     <ClInclude Include="FrameControl.h" />
     <ClInclude Include="List.h" />
     <ClInclude Include="GameLogic.h" />
+    <ClInclude Include="MsgBuf.h" />
     <ClInclude Include="Network.h" />
     <ClInclude Include="PacketDefine.h" />
     <ClInclude Include="Protocol.h" />
