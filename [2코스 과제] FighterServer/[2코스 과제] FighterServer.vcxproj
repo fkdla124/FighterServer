@@ -148,13 +148,19 @@
     <ClCompile Include="GameLogic.cpp" />
     <ClCompile Include="Network.cpp" />
     <ClCompile Include="Protocol.cpp" />
+    <ClCompile Include="RPC_ServerProxy.cpp" />
+    <ClCompile Include="RPC_ServerStub.cpp" />
+    <ClCompile Include="SendPacket.cpp" />
     <ClCompile Include="Server.cpp" />
+    <ClCompile Include="Session.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Common.h" />
     <ClInclude Include="Debug.h" />
     <ClInclude Include="Define.h" />
     <ClInclude Include="DisplayNetworkInfo.h" />
     <ClInclude Include="FrameControl.h" />
+    <ClInclude Include="GameStub.h" />
     <ClInclude Include="List.h" />
     <ClInclude Include="GameLogic.h" />
     <ClInclude Include="MsgBuf.h" />
@@ -162,6 +168,9 @@
     <ClInclude Include="PacketDefine.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="RPC_ServerProxy.h" />
+    <ClInclude Include="RPC_ServerStub.h" />
+    <ClInclude Include="SendPacket.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="SocketErrorcode.h" />
   </ItemGroup>

@@ -10,5 +10,3 @@
 void StartServer(linger _linger, ULONG nonBlocking);
 void StopServer();
 void Network();
-
-extern List<Session*> sessionList;

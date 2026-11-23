@@ -7,6 +7,7 @@
 #include "RingBuffer.h"
 #include "PacketDefine.h"
 #include "Define.h"
+#include "List.h"
 #include <ctime>
 
 // 세션별 할당 ID. 0부터 +1씩
@@ -55,3 +56,9 @@ struct Session
 		facing = PACKET_MOVE_DIR_RR;
 	}
 };
+
+extern List<Session*> sessionList;
+
+// 세션 연결종료 관련
+void DisconnectSession(Session* session);	// 삭제 마킹, 플레이어 제거 메시지 보내기
+void SweepMarkedSession();					// 마킹된 세션 세션리스트에서 삭제.
