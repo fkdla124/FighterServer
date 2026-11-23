@@ -3,7 +3,7 @@
 #include <cstdio>
 
 // 디버깅 정보 프린트 on/off
-// #define DEBUG_PRINT
+#define DEBUG_PRINT
 
 
 

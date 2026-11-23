@@ -28,6 +28,12 @@
     <Filter Include="소스 파일\Debug">
       <UniqueIdentifier>{19b8397a-d685-4d9c-90bf-63d606987013}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\RPC">
+      <UniqueIdentifier>{2493e316-ddac-4c3d-b8d6-b0cee576a433}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\RPC\메시지처리 구현">
+      <UniqueIdentifier>{46e7ec59-16f6-4ac5-a66d-3f18bd8c8d38}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Network.cpp">
@@ -47,6 +53,18 @@
     </ClCompile>
     <ClCompile Include="DisplayNetworkInfo.cpp">
       <Filter>소스 파일\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="RPC_ServerProxy.cpp">
+      <Filter>소스 파일\RPC</Filter>
+    </ClCompile>
+    <ClCompile Include="RPC_ServerStub.cpp">
+      <Filter>소스 파일\RPC</Filter>
+    </ClCompile>
+    <ClCompile Include="SendPacket.cpp">
+      <Filter>소스 파일\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>소스 파일\Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -85,6 +103,24 @@
     </ClInclude>
     <ClInclude Include="DisplayNetworkInfo.h">
       <Filter>소스 파일\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="MsgBuf.h">
+      <Filter>소스 파일\자료구조</Filter>
+    </ClInclude>
+    <ClInclude Include="RPC_ServerProxy.h">
+      <Filter>소스 파일\RPC</Filter>
+    </ClInclude>
+    <ClInclude Include="RPC_ServerStub.h">
+      <Filter>소스 파일\RPC</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>소스 파일\RPC</Filter>
+    </ClInclude>
+    <ClInclude Include="SendPacket.h">
+      <Filter>소스 파일\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="GameStub.h">
+      <Filter>소스 파일\RPC\메시지처리 구현</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

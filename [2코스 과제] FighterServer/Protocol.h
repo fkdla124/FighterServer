@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "MsgBuf.h"
+
 // 우리게임의 페이로드를 넉넉히 수용할 수 있는 사이즈
 // (메시지 처리과정에서 링버퍼에서 페이로드를 스택 로컬버퍼에 pop() 합니다. 그 때 우리게임의 페이로드 크기를 고려한 적당히 널널한 로컬버퍼 사이즈입니다.)
 #define PROCESS_MESSAGE_PAYLOAD_BUF_SIZE 10
@@ -162,17 +164,17 @@ struct Damage
 #pragma pack(pop)
 
 // 패킷 생성 함수
-void mpCreatePlayer(MessageHeader* header, CreatePlayer* msg, int id, char direction, float x, float y, char hp);
-void mpCreateOther(MessageHeader* header, CreateOther* msg, int id, char direction, float x, float y, char hp);
-void mpDeletePlayer(MessageHeader* header, DeletePlayer* msg, int id);
-void mpMoveStart(MessageHeader* header, MoveStart* msg, char direction, float x, float y);
-void mpMoveStartOther(MessageHeader* header, MoveStartOther* msg, int id, char direction, float x, float y);
-void mpMoveStop(MessageHeader* header, MoveStop* msg, char direction, float x, float y);
-void mpMoveStopOther(MessageHeader* header, MoveStopOther* msg, int id, char direction, float x, float y);
-void mpAttack1Request(MessageHeader* header, Attack1Request* msg, char direction, float x, float y);
-void mpAttack1Response(MessageHeader* header, Attack1Response* msg, int id, char direction, float x, float y);
-void mpAttack2Request(MessageHeader* header, Attack2Request* msg, char direction, float x, float y);
-void mpAttack2Response(MessageHeader* header, Attack2Response* msg, int id, char direction, float x, float y);
-void mpAttack3Request(MessageHeader* header, Attack3Request* msg, char direction, float x, float y);
-void mpAttack3Response(MessageHeader* header, Attack3Response* msg, int id, char direction, float x, float y);
-void mpDamage(MessageHeader* header, Damage* msg, int attackID, int damageID, char damageHP);
+void mpCreatePlayer(MsgBuf* msgBuf, int id, char direction, float x, float y, char hp);
+void mpCreateOther(MsgBuf* msgBuf, int id, char direction, float x, float y, char hp);
+void mpDeletePlayer(MsgBuf* msgBuf, int id);
+void mpMoveStart(MsgBuf* msgBuf, char direction, float x, float y);
+void mpMoveStartOther(MsgBuf* msgBuf, int id, char direction, float x, float y);
+void mpMoveStop(MsgBuf* msgBuf, char direction, float x, float y);
+void mpMoveStopOther(MsgBuf* msgBuf, int id, char direction, float x, float y);
+void mpAttack1Request(MsgBuf* msgBuf, char direction, float x, float y);
+void mpAttack1Response(MsgBuf* msgBuf, int id, char direction, float x, float y);
+void mpAttack2Request(MsgBuf* msgBuf, char direction, float x, float y);
+void mpAttack2Response(MsgBuf* msgBuf, int id, char direction, float x, float y);
+void mpAttack3Request(MsgBuf* msgBuf, char direction, float x, float y);
+void mpAttack3Response(MsgBuf* msgBuf, int id, char direction, float x, float y);
+void mpDamage(MsgBuf* msgBuf, int attackID, int damageID, char damageHP);
