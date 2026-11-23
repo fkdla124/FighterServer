@@ -141,6 +141,12 @@
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
+    <PreBuildEvent>
+      <Command>RpcGen.exe Protocol.rpc</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>RPC 코드 생성</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DisplayNetworkInfo.cpp" />
@@ -173,6 +179,9 @@
     <ClInclude Include="SendPacket.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="SocketErrorcode.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Protocol.rpc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

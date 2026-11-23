@@ -123,4 +123,9 @@
       <Filter>소스 파일\RPC\메시지처리 구현</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Protocol.rpc">
+      <Filter>소스 파일\RPC\메시지처리 구현</Filter>
+    </None>
+  </ItemGroup>
 </Project>
