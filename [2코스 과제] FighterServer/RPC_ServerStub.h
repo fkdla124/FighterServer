@@ -20,9 +20,9 @@ class Stub : public StubInterface
 public:
 	bool MessageProc(Session* session, MessageHeader& header, MsgBuf& msg) override;
 
-	virtual bool MoveStart(Session* session, char direction, short x, short y) = 0;
-	virtual bool MoveStop(Session* session, char direction, short x, short y) = 0;
-	virtual bool Attack1(Session* session, char direction, short x, short y) = 0;
-	virtual bool Attack2(Session* session, char direction, short x, short y) = 0;
-	virtual bool Attack3(Session* session, char direction, short x, short y) = 0;
+	virtual bool MoveStart(Session* session, char direction, short x, short y) { return false; }
+	virtual bool MoveStop(Session* session, char direction, short x, short y) { return false; }
+	virtual bool Attack1(Session* session, char direction, short x, short y) { return false; }
+	virtual bool Attack2(Session* session, char direction, short x, short y) { return false; }
+	virtual bool Attack3(Session* session, char direction, short x, short y) { return false; }
 };
