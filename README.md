@@ -2,7 +2,7 @@
 * select 모델을 사용하여 간단한 2D게임의 서버 제작
 * 클라이언트는 이미 제작 되어있는 상태로 프로토콜을 맞춰 서버만 직접 제작
 * 직접만든 [링버퍼](https://github.com/fkdla124/RingBuffer), [리스트](https://github.com/fkdla124/LinkedList), [직렬화 버퍼](https://github.com/fkdla124/MsgBuf) 사용
-* RPC 사용 [RPC](https://github.com/fkdla124/RpcGen)
+* RpcGen.exe -> RPC 소스파일 자동생성 [RpcGen](https://github.com/fkdla124/RpcGen)
 
 # 서버 작동 이미지
 ![게임화면 이미지](./image/GameImage.png)
@@ -10,166 +10,52 @@
 # 더미테스트 이미지 (AI로 만든 더미클라 + 내 서버)
 ![더미테스트 클라 이미지](./image/DummyTestImage.png)
 
-# 📦 Message Protocol
-```cpp
-#pragma once
+# 📦 Message Protocol (RPC + 직렬화버퍼 사용)
+```txt
+# ================================================================
+# RPC 정의 형식: 
+# Server -> Client:	SC_함수이름(); 메시지타입번호
+# Client -> Server:	CS_함수이름(); 
+# (메시지타입번호가 없으면 가장 마지막 번호지정에서 +1씩 올라갑니다)
+#
+# 주석 -> #
+# 첫 글자가 개행, 공백인 라인은 무시합니다.
+# 
+#
+#
+# 생성 파일:
+# Common.h
+# RPC_ServerProxy.cpp
+# RPC_ServerProxy.h
+# RPC_ServerStub.cpp
+# RPC_ServerStub.h
+# RPC_ClientProxy.cpp
+# RPC_ClientProxy.h
+# RPC_ClientStub.cpp
+# RPC_ClientStub.h
+# ===============================================================
 
-// byte order
-#pragma pack(push, 1)
+# 플레이어 접속, 삭제 동기화
+SC_CreatePlayer(int id, char direction, short x, short y, char hp); 0
+SC_CreateOther(int id, char direction, short x, short y, char hp);
+SC_DeletePlayer(int id);
 
-/////////////////////////////////////////////////////////////////////////////////
-// Header
+# 이동 동기화
+CS_MoveStart(char direction, short x, short y); 10
+SC_MoveStart(int id, char direction, short x, short y);
+CS_MoveStop(char direction, short x, short y);
+SC_MoveStop(int id, char direction, short x, short y);
 
-struct MessageHeader
-{
-	char packetCode;
-	char len;
-	char type;
-};
+# 공격 동기화
+CS_Attack1(char direction, short x, short y); 20
+SC_Attack1(int id, char direction, short x, short y);
+CS_Attack2(char direction, short x, short y);
+SC_Attack2(int id, char direction, short x, short y);
+CS_Attack3(char direction, short x, short y);
+SC_Attack3(int id, char direction, short x, short y);
 
-/////////////////////////////////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////////////////////////////////
-// Player Create/Delete
-
-// type = 0, RES
-struct CreatePlayer
-{
-	int id;
-	char direction;
-	short x;
-	short y;
-	char hp;
-};
-
-// type = 1, RES
-struct CreateOther
-{
-	int id;
-	char direction;
-	short x;
-	short y;
-	char hp;
-};
-
-// type = 2, RES
-struct DeletePlayer
-{
-	int id;
-};
-
-/////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////////////////////////////////
-// Move
-
-// type = 10, REQ
-struct MoveStart
-{
-	char direction;
-
-	// 목적지 기반 이동 동기화에선 안 넣는게 정석 구현.
-	// 지금은 목적지(더미) 기반 이동 동기화가 아님!!
-	short x;
-	short y;
-};
-
-// type = 11, RES
-struct MoveStartOther
-{
-	int id;
-	char direction;
-
-	short x;
-	short y;
-};
-
-// type = 12, REQ
-struct MoveStop
-{
-	char direction;
-	short x;
-	short y;
-};
-
-// type = 13, RES
-struct MoveStopOther
-{
-	int id;
-	char direction;
-	short x;
-	short y;
-};
-
-/////////////////////////////////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////////////////////////////////
-// Attack
-
-// type = 20, REQ
-struct Attack1Request
-{
-	char direction;
-	short x;
-	short y;
-};
-
-// type = 21, RES
-struct Attack1Response
-{
-	int id;
-	char direction;
-	short x;
-	short y;
-};
-
-// type = 22, REQ
-struct Attack2Request
-{
-	char direction;
-	short x;
-	short y;
-};
-
-// type = 23, RES
-struct Attack2Response
-{
-	int id;
-	char direction;
-	short x;
-	short y;
-};
-
-// type = 24, REQ
-struct Attack3Request
-{
-	char direction;
-	short x;
-	short y;
-};
-
-// type = 25, RES
-struct Attack3Response
-{
-	int id;
-	char direction;
-	short x;
-	short y;
-};
-
-// type = 30, RES
-struct Damage
-{
-	int attackID; // 공격자
-	int damageID; // 피해자
-	char damageHP; // 피해자 남은 HP
-};
-
-/////////////////////////////////////////////////////////////////////////////////
-
-#pragma pack(pop)
+# 데미지
+SC_Damage(int attackID, int targetID, char targetHP); 30
 ```
 
 # main()
