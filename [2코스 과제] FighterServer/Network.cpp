@@ -20,8 +20,7 @@
 
 // RPC
 #include "RPC_ServerProxy.h"
-#include "RPC_ServerStub.h"
-#include "GameStub.h"
+#include "StubInterface.h"
 
 #include <windows.h>
 #pragma comment(lib, "winmm.lib")
@@ -275,22 +274,33 @@ void AcceptClient()
 			, acceptSessionIp, acceptSession->addr.sin_port, acceptSession->id, acceptSession->direction, acceptSession->facing, acceptSession->x, acceptSession->y);
 
 		// 접속한 플레이어 생성 메시지
-		RPC::CreatePlayer(SendType::Unicast, acceptSession, acceptSession->id, acceptSession->direction, acceptSession->x, acceptSession->y, acceptSession->hp);
+		List<Session*> sendSessionList;
+		sendSessionList.push_back(acceptSession);
+		RPC::SendCreatePlayer(sendSessionList, acceptSession->id, acceptSession->direction, acceptSession->x, acceptSession->y, acceptSession->hp);
+		sendSessionList.clear();
 
 		// 접속한 플레이어를 다른 플레이어에게 알리기
-		RPC::CreateOther(SendType::Broadcast, acceptSession, acceptSession->id, acceptSession->direction, acceptSession->x, acceptSession->y, acceptSession->hp);
+		for (const auto session : sessionList)
+		{
+			if (session != acceptSession)
+				sendSessionList.push_back(session);
+		}
+		RPC::SendCreateOther(sendSessionList, acceptSession->id, acceptSession->direction, acceptSession->x, acceptSession->y, acceptSession->hp);
+		sendSessionList.clear();
 
 		// 접속한 플레이어에게 다른 플레이어들 생성하는 메시지
+		sendSessionList.push_back(acceptSession);
 		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
 		{
 			if ((*it)->id != acceptSession->id)
 			{
-				RPC::CreateOther(SendType::Unicast, acceptSession, (*it)->id, (*it)->direction, (*it)->x, (*it)->y, (*it)->hp);
+				RPC::SendCreateOther(sendSessionList, (*it)->id, (*it)->direction, (*it)->x, (*it)->y, (*it)->hp);
 
 				if ((*it)->move == true)
-					RPC::MoveStart(SendType::Unicast, acceptSession, (*it)->id, (*it)->direction, (*it)->x, (*it)->y);
+					RPC::SendMoveStart(sendSessionList, (*it)->id, (*it)->direction, (*it)->x, (*it)->y);
 			}
 		}
+		sendSessionList.clear();
 	}
 }
 
@@ -347,12 +357,9 @@ void RecvMessage(Session* session)
 	session->recvRingBuf.MoveRear(bytesReceived);
 }
 
+// 네트워크 메시지처리부에서 RPC 사용
 void ProcessMessage(Session* session)
 {
-	// 마킹된 세션은 처리 X
-	if (session->del == true)
-		return;
-
 	while (1)
 	{
 		// 최소한 헤더는 받았는가?
@@ -381,12 +388,12 @@ void ProcessMessage(Session* session)
 		int popLen = session->recvRingBuf.pop(msg.GetBuffer(), header.len);
 		msg.MoveRear(popLen);
 
-		GameStub gameStub;
-		StubInterface* iStub = &gameStub;
-		if (iStub->MessageProc(session, header, msg) == false)
+		// 인터페이스로 호출
+		if (iStub == nullptr || iStub->MessageDispatcher(session, header, msg) == false)
 		{
 			DisconnectSession(session);
 			return;
 		}
 	}
 }
+

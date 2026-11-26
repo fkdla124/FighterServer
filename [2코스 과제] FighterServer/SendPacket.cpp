@@ -9,120 +9,102 @@
 #include <cstdio>
 
 
-void SendUnicast(Session* session, MsgBuf& sendMsgBuf)
+void SendPacket(List<Session*>& sessionList, MsgBuf& sendMsgBuf)
 {
 	// 링버퍼 push
-	returnValuePush = session->sendRingBuf.push(sendMsgBuf.GetBuffer(), sendMsgBuf.size());
-	if (returnValuePush != sendMsgBuf.size())
+	for (const auto session : sessionList)
 	{
-		// 송신링버퍼가 꽉찼음. 또는 나의 링버퍼 push가 잘못됨.
-		// 파일로 로그 남기고 연결 끊기.
-		tm t;
-		time_t tt = time(NULL);
-		localtime_s(&t, &tt);
-		char fileName[256];
-		sprintf_s(fileName, "[SendRingBuffer Full Error]%04d%02d%02d_%02d%02d%02d.txt", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
-
-		#pragma warning(disable:6387 6328) // fp가 NULL일 수 있다. fwprintf() 정수 서식지정자 타입 불일치
-		FILE* fp;
-		fopen_s(&fp, fileName, "wb");
-
-		// UTF-16 LE BOM
-		unsigned char bom[] = { 0xFF, 0xFE };
-		fwrite(bom, 1, 2, fp);
-
-		fwprintf(fp, L"RingBuffer Full error. FILE: %s, LINE: %d, recvSessionID: %d \n", __FILEW__, __LINE__, session->id);
-		fwprintf(fp, L"[!!!Error!!!] SendUnicast() -> session->sendRingBuf.push() error. capacity: %zu, size: %zu, pushSize: %zu, return: %d\n",
-			session->sendRingBuf.capacity(), session->sendRingBuf.size(), sendMsgBuf.size(), returnValuePush);
-
-		// 보내려고 했던 메시지 내용 출력
-		char* msgBuffer = sendMsgBuf.GetBuffer();
-		fwprintf(fp, L"msgBuffer -> [ ");
-		for (int i = 0; i < sendMsgBuf.size(); i++)
+		returnValuePush = session->sendRingBuf.push(sendMsgBuf.GetBuffer(), sendMsgBuf.size());
+		if (returnValuePush != sendMsgBuf.size())
 		{
-			fwprintf(fp, L"%02X ", (unsigned char)msgBuffer[i]);
-		}
-		fwprintf(fp, L"]\n");
+			// 송신링버퍼가 꽉찼음. 또는 나의 링버퍼 push가 잘못됨.
+			// 파일로 로그 남기고 연결 끊기.
+			tm t;
+			time_t tt = time(NULL);
+			localtime_s(&t, &tt);
+			char fileName[256];
+			sprintf_s(fileName, "[SendRingBuffer Full Error]%04d%02d%02d_%02d%02d%02d.txt", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
 
-		fclose(fp);
-		#pragma warning(default:6387 6328)
+			#pragma warning(disable:6387 6328) // fp가 NULL일 수 있다. fwprintf() 정수 서식지정자 타입 불일치
+			FILE* fp;
+			fopen_s(&fp, fileName, "wb");
 
-		// 지연삭제 마킹 및 연결끊기. SO_LINGER {0, 0} RST 전송
-		DisconnectSession(session);
+			// UTF-16 LE BOM
+			unsigned char bom[] = { 0xFF, 0xFE };
+			fwrite(bom, 1, 2, fp);
 
-		printf("[!!!Error!!!] SendUnicast() -> session->sendRingBuf.push() error. capacity: %zu, size: %zu, pushSize: %zu, return: %d\n",
-			session->sendRingBuf.capacity(), session->sendRingBuf.size(), sendMsgBuf.size(), returnValuePush);
-	}
+			fwprintf(fp, L"RingBuffer Full error. FILE: %s, LINE: %d, recvSessionID: %d \n", __FILEW__, __LINE__, session->id);
+			fwprintf(fp, L"[!!!Error!!!] SendUnicast() -> session->sendRingBuf.push() error. capacity: %zu, size: %zu, pushSize: %zu, return: %d\n",
+				session->sendRingBuf.capacity(), session->sendRingBuf.size(), sendMsgBuf.size(), returnValuePush);
 
-	// 디버깅용 출력 (직렬화버퍼로 변경 후 구조체 안 쓰는 게 맞지만 귀찮아서 그냥 씀..)
-	#ifdef DEBUG_PRINT
-	MessageHeader* msgHeader = (MessageHeader*)sendMsgBuf.GetBuffer();
-	switch (msgHeader->type)
-	{
-		case PACKET_RES_MOVE_START:
-		{
-			MoveStartOther* msgPtr = (MoveStartOther*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
-			DebugPrint("[Server MoveStartOther] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_MOVE_START), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
-				session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
-			break;
-		}
-		case PACKET_RES_MOVE_STOP:
-		{
-			MoveStopOther* msgPtr = (MoveStopOther*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
-			DebugPrint("[Server MoveStopOther] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_MOVE_STOP), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
-				session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
-			break;
-		}
-		case PACKET_RES_ATTACK1:
-		{
-			Attack1Response* msgPtr = (Attack1Response*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
-			DebugPrint("[Server Attack1Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK1), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
-				session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
-			break;
-		}
-		case PACKET_RES_ATTACK2:
-		{
-			Attack2Response* msgPtr = (Attack2Response*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
-			DebugPrint("[Server Attack2Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK2), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
-				session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
-			break;
-		}
-		case PACKET_RES_ATTACK3:
-		{
-			Attack3Response* msgPtr = (Attack3Response*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
-			DebugPrint("[Server Attack3Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK3), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
-				session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
-			break;
-		}
-		case PACKET_RES_DAMAGE:
-		{
-			Damage* msgPtr = (Damage*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
-			DebugPrint("[Server Damage] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_DAMAGE), Payload(attackID: %d, targetID: %d, targetHP: %d)\n",
-				session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->attackID, msgPtr->damageID, msgPtr->damageHP);
-			break;
-		}
-	}
-	#endif
-}
-
-void SendBroadcast(Session* exceptSession, MsgBuf& sendMsgBuf)
-{
-	if (exceptSession == nullptr)
-	{
-		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
-		{
-			SendUnicast((*it), sendMsgBuf);
-		}
-	}
-	else
-	{
-		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
-		{
-			if ((*it)->sock != exceptSession->sock)
+			// 보내려고 했던 메시지 내용 출력
+			char* msgBuffer = sendMsgBuf.GetBuffer();
+			fwprintf(fp, L"msgBuffer -> [ ");
+			for (int i = 0; i < sendMsgBuf.size(); i++)
 			{
-				SendUnicast((*it), sendMsgBuf);
+				fwprintf(fp, L"%02X ", (unsigned char)msgBuffer[i]);
+			}
+			fwprintf(fp, L"]\n");
+
+			fclose(fp);
+			#pragma warning(default:6387 6328)
+
+			// 지연삭제 마킹 및 연결끊기. SO_LINGER {0, 0} RST 전송
+			DisconnectSession(session);
+
+			printf("[!!!Error!!!] SendUnicast() -> session->sendRingBuf.push() error. capacity: %zu, size: %zu, pushSize: %zu, return: %d\n",
+				session->sendRingBuf.capacity(), session->sendRingBuf.size(), sendMsgBuf.size(), returnValuePush);
+		}
+
+		// 디버깅용 출력 (직렬화버퍼로 변경 후 구조체 안 쓰는 게 맞지만 귀찮아서 그냥 씀..)
+		#ifdef DEBUG_PRINT
+		MessageHeader* msgHeader = (MessageHeader*)sendMsgBuf.GetBuffer();
+		switch (msgHeader->type)
+		{
+			case PACKET_RES_MOVE_START:
+			{
+				MoveStartOther* msgPtr = (MoveStartOther*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
+				DebugPrint("[Server MoveStartOther] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_MOVE_START), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
+					session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+				break;
+			}
+			case PACKET_RES_MOVE_STOP:
+			{
+				MoveStopOther* msgPtr = (MoveStopOther*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
+				DebugPrint("[Server MoveStopOther] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_MOVE_STOP), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
+					session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+				break;
+			}
+			case PACKET_RES_ATTACK1:
+			{
+				Attack1Response* msgPtr = (Attack1Response*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
+				DebugPrint("[Server Attack1Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK1), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
+					session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+				break;
+			}
+			case PACKET_RES_ATTACK2:
+			{
+				Attack2Response* msgPtr = (Attack2Response*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
+				DebugPrint("[Server Attack2Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK2), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
+					session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+				break;
+			}
+			case PACKET_RES_ATTACK3:
+			{
+				Attack3Response* msgPtr = (Attack3Response*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
+				DebugPrint("[Server Attack3Response] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_ATTACK3), Payload(id: %d, direction: %d, X: %d, Y: %d)\n",
+					session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->id, msgPtr->direction, msgPtr->x, msgPtr->y);
+				break;
+			}
+			case PACKET_RES_DAMAGE:
+			{
+				Damage* msgPtr = (Damage*)(sendMsgBuf.GetBuffer() + sizeof(MessageHeader));
+				DebugPrint("[Server Damage] SessionID: %d, Header(packetCode: 0x%02x, len: %d, type: PACKET_RES_DAMAGE), Payload(attackID: %d, targetID: %d, targetHP: %d)\n",
+					session->id, (unsigned char)msgHeader->packetCode, msgHeader->len, msgPtr->attackID, msgPtr->damageID, msgPtr->damageHP);
+				break;
 			}
 		}
+		#endif
 	}
 }
 

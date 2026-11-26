@@ -10,6 +10,7 @@
 #
 #
 # 생성 파일:
+# Common.h
 # RPC_ServerProxy.cpp
 # RPC_ServerProxy.h
 # RPC_ServerStub.cpp

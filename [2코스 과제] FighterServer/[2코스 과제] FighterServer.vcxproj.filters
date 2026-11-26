@@ -66,6 +66,9 @@
     <ClCompile Include="Session.cpp">
       <Filter>소스 파일\Network</Filter>
     </ClCompile>
+    <ClCompile Include="GameStub.cpp">
+      <Filter>소스 파일\RPC\메시지처리 구현</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="List.h">
@@ -120,6 +123,9 @@
       <Filter>소스 파일\Network</Filter>
     </ClInclude>
     <ClInclude Include="GameStub.h">
+      <Filter>소스 파일\RPC\메시지처리 구현</Filter>
+    </ClInclude>
+    <ClInclude Include="StubInterface.h">
       <Filter>소스 파일\RPC\메시지처리 구현</Filter>
     </ClInclude>
   </ItemGroup>

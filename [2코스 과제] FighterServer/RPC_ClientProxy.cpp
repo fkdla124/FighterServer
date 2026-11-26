@@ -10,7 +10,7 @@
 
 namespace RPC
 {
-	void MoveStart(Session* session, char direction, short x, short y)
+	void SendMoveStart(Session* session, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -21,10 +21,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << direction << x << y;
 
-		SendUnicast(session, msgBuf);
+		SendPacket(session, msgBuf);
 	}
 
-	void MoveStop(Session* session, char direction, short x, short y)
+	void SendMoveStop(Session* session, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -35,10 +35,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << direction << x << y;
 
-		SendUnicast(session, msgBuf);
+		SendPacket(session, msgBuf);
 	}
 
-	void Attack1(Session* session, char direction, short x, short y)
+	void SendAttack1(Session* session, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -49,10 +49,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << direction << x << y;
 
-		SendUnicast(session, msgBuf);
+		SendPacket(session, msgBuf);
 	}
 
-	void Attack2(Session* session, char direction, short x, short y)
+	void SendAttack2(Session* session, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -63,10 +63,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << direction << x << y;
 
-		SendUnicast(session, msgBuf);
+		SendPacket(session, msgBuf);
 	}
 
-	void Attack3(Session* session, char direction, short x, short y)
+	void SendAttack3(Session* session, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -77,6 +77,6 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << direction << x << y;
 
-		SendUnicast(session, msgBuf);
+		SendPacket(session, msgBuf);
 	}
 }

@@ -1,15 +1,23 @@
 #pragma once
 
 #include "Session.h"
+#include "StubInterface.h"
 #include "RPC_ServerStub.h"
 #include "RPC_ServerProxy.h"
+#include "Debug.h"
+#include <cmath>
 
 static bool CheckCollision(char attackType, char attackerFacing, float attackerX, float attackerY, float targetX, float targetY);
 
 class GameStub : public Stub
 {
 public:
-	bool MoveStart(Session* session, char direction, short x, short y) override
+	GameStub()
+	{
+		SetStubInterface(dynamic_cast<StubInterface*>(this));
+	}
+
+	bool RecvMoveStart(Session* session, char direction, short x, short y) override
 	{
 		// 방향 0~7 이외가 오면 연결끊기.
 		if (direction < PACKET_MOVE_DIR_LL || direction > PACKET_MOVE_DIR_LD)
@@ -53,12 +61,17 @@ public:
 		DebugPrint("[Client MoveStart] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 		// RPC
-		RPC::MoveStart(SendType::Broadcast, session, session->id, session->direction, session->x, session->y);
+		List<Session*> sendList;
+		for (const auto s : sessionList)
+			if (s != session)
+				sendList.push_back(s);
+
+		RPC::SendMoveStart(sendList, session->id, session->direction, session->x, session->y);
 		return true;
 	}
 
-	bool MoveStop(Session* session, char direction, short x, short y) override
-	{
+	bool RecvMoveStop(Session* session, char direction, short x, short y) override
+	{ 
 		// 방향 0~7 이외가 오면 연결끊기.
 		if (direction < PACKET_MOVE_DIR_LL || direction > PACKET_MOVE_DIR_LD)
 		{
@@ -97,11 +110,16 @@ public:
 
 		DebugPrint("[Client MoveStop] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
-		RPC::MoveStop(SendType::Broadcast, session, session->id, session->direction, session->x, session->y);
+		List<Session*> sendList;
+		for (const auto s : sessionList)
+			if (s != session)
+				sendList.push_back(s);
+
+		RPC::SendMoveStop(sendList, session->id, session->direction, session->x, session->y);
 		return true;
 	}
 
-	bool Attack1(Session* session, char direction, short x, short y) override
+	bool RecvAttack1(Session* session, char direction, short x, short y) override
 	{
 		// 지난 공격의 쿨타임이 지나지 않았다면 이번패킷은 무시하고 다음메시지 처리
 		unsigned int attackTickDiff = timeGetTime() - session->lastAttackTick;
@@ -152,7 +170,12 @@ public:
 
 		DebugPrint("[Client Attack1Request] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
-		RPC::Attack1(SendType::Broadcast, session, session->id, session->direction, session->x, session->y);
+		List<Session*> sendList;
+		for (const auto s : sessionList)
+			if (s != session)
+				sendList.push_back(s);
+
+		RPC::SendAttack1(sendList, session->id, session->direction, session->x, session->y);
 
 		// 충돌체크
 		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
@@ -161,7 +184,8 @@ public:
 			{
 				// 데미지 메시지 생성. 모두에게 보내기
 				(*it)->hp -= ATTACK1_DAMAGE;
-				RPC::Damage(SendType::Broadcast, nullptr, session->id, (*it)->id, (*it)->hp);
+
+				RPC::SendDamage(sessionList, session->id, (*it)->id, (*it)->hp);
 
 				// 피격자 사망.
 				if ((*it)->hp <= 0)
@@ -178,7 +202,7 @@ public:
 		return true;
 	}
 
-	bool Attack2(Session* session, char direction, short x, short y) override
+	bool RecvAttack2(Session* session, char direction, short x, short y) override
 	{
 		// 지난 공격의 쿨타임이 지나지 않았다면 이번패킷은 무시하고 다음메시지 처리
 		unsigned int attackTickDiff = timeGetTime() - session->lastAttackTick;
@@ -230,7 +254,13 @@ public:
 		DebugPrint("[Client Attack2Request] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
 		// 공격액션 다른 클라에게 브로드캐스트
-		RPC::Attack2(SendType::Broadcast, session, session->id, session->direction, session->x, session->y);
+
+		List<Session*> sendList;
+		for (const auto s : sessionList)
+			if (s != session)
+				sendList.push_back(s);
+
+		RPC::SendAttack2(sendList, session->id, session->direction, session->x, session->y);
 
 		// 충돌체크
 		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
@@ -239,7 +269,7 @@ public:
 			{
 				// 데미지 메시지 생성. 모두에게 보내기
 				(*it)->hp -= ATTACK2_DAMAGE;
-				RPC::Damage(SendType::Broadcast, nullptr, session->id, (*it)->id, (*it)->hp);
+				RPC::SendDamage(sessionList, session->id, (*it)->id, (*it)->hp);
 
 				// 피격자 사망.
 				if ((*it)->hp <= 0)
@@ -256,7 +286,7 @@ public:
 		return true;
 	}
 
-	bool Attack3(Session* session, char direction, short x, short y) override
+	bool RecvAttack3(Session* session, char direction, short x, short y) override
 	{
 		// 지난 공격의 쿨타임이 지나지 않았다면 이번패킷은 무시하고 다음메시지 처리
 		unsigned int attackTickDiff = timeGetTime() - session->lastAttackTick;
@@ -307,7 +337,12 @@ public:
 
 		DebugPrint("[Client Attack3Request] SessionID(server): %d, Direction: %d, Facing(server): %d, X: %f, Y: %f\n", session->id, session->direction, session->facing, session->x, session->y);
 
-		RPC::Attack3(SendType::Broadcast, session, session->id, session->direction, session->x, session->y);
+		List<Session*> sendList;
+		for (const auto s : sessionList)
+			if (s != session)
+				sendList.push_back(s);
+
+		RPC::SendAttack3(sendList, session->id, session->direction, session->x, session->y);
 
 		// 충돌체크
 		for (List<Session*>::Iterator it = sessionList.begin(); it != sessionList.end(); ++it)
@@ -316,7 +351,7 @@ public:
 			{
 				// 데미지 메시지 생성. 모두에게 보내기
 				(*it)->hp -= ATTACK3_DAMAGE;
-				RPC::Damage(SendType::Broadcast, nullptr, session->id, (*it)->id, (*it)->hp);
+				RPC::SendDamage(sessionList, session->id, (*it)->id, (*it)->hp);
 
 				// 피격자 사망.
 				if ((*it)->hp <= 0)

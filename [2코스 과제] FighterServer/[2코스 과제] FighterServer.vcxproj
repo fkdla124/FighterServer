@@ -152,6 +152,7 @@
     <ClCompile Include="DisplayNetworkInfo.cpp" />
     <ClCompile Include="FrameControl.cpp" />
     <ClCompile Include="GameLogic.cpp" />
+    <ClCompile Include="GameStub.cpp" />
     <ClCompile Include="Network.cpp" />
     <ClCompile Include="Protocol.cpp" />
     <ClCompile Include="RPC_ServerProxy.cpp" />
@@ -179,6 +180,7 @@
     <ClInclude Include="SendPacket.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="SocketErrorcode.h" />
+    <ClInclude Include="StubInterface.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Protocol.rpc" />

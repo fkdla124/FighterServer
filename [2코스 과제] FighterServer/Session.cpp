@@ -22,7 +22,13 @@ void SweepMarkedSession()
 		if ((*it)->del == true)
 		{
 			DebugPrint("[Sweep Marked Session] ID: %d\n", (*it)->id);
-			RPC::DeletePlayer(SendType::Broadcast, (*it), (*it)->id);
+
+			List<Session*> sendList;
+			for (const auto s : sessionList)
+				if (s != (*it))
+					sendList.push_back(s);
+
+			RPC::SendDeletePlayer(sendList, (*it)->id);
 			closesocket((*it)->sock);
 			delete (*it);
 			it = sessionList.erase(it);

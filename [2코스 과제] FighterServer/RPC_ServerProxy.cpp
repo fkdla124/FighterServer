@@ -10,7 +10,7 @@
 
 namespace RPC
 {
-	void CreatePlayer(SendType sendType, Session* session, int id, char direction, short x, short y, char hp)
+	void SendCreatePlayer(List<Session*>& sessionList, int id, char direction, short x, short y, char hp)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -21,13 +21,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << id << direction << x << y << hp;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 
-	void CreateOther(SendType sendType, Session* session, int id, char direction, short x, short y, char hp)
+	void SendCreateOther(List<Session*>& sessionList, int id, char direction, short x, short y, char hp)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -38,13 +35,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << id << direction << x << y << hp;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 
-	void DeletePlayer(SendType sendType, Session* session, int id)
+	void SendDeletePlayer(List<Session*>& sessionList, int id)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -55,13 +49,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << id;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 
-	void MoveStart(SendType sendType, Session* session, int id, char direction, short x, short y)
+	void SendMoveStart(List<Session*>& sessionList, int id, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -72,13 +63,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << id << direction << x << y;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 
-	void MoveStop(SendType sendType, Session* session, int id, char direction, short x, short y)
+	void SendMoveStop(List<Session*>& sessionList, int id, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -89,13 +77,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << id << direction << x << y;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 
-	void Attack1(SendType sendType, Session* session, int id, char direction, short x, short y)
+	void SendAttack1(List<Session*>& sessionList, int id, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -106,13 +91,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << id << direction << x << y;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 
-	void Attack2(SendType sendType, Session* session, int id, char direction, short x, short y)
+	void SendAttack2(List<Session*>& sessionList, int id, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -123,13 +105,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << id << direction << x << y;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 
-	void Attack3(SendType sendType, Session* session, int id, char direction, short x, short y)
+	void SendAttack3(List<Session*>& sessionList, int id, char direction, short x, short y)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -140,13 +119,10 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << id << direction << x << y;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 
-	void Damage(SendType sendType, Session* session, int attackID, int targetID, char targetHP)
+	void SendDamage(List<Session*>& sessionList, int attackID, int targetID, char targetHP)
 	{
 		MessageHeader header;
 		header.packetCode = (char)0x89;
@@ -157,9 +133,6 @@ namespace RPC
 		msgBuf << header.packetCode << header.len << header.type;
 		msgBuf << attackID << targetID << targetHP;
 
-		if (sendType == SendType::Unicast)
-			SendUnicast(session, msgBuf);
-		else if (sendType == SendType::Broadcast)
-			SendBroadcast(session, msgBuf);
+		SendPacket(sessionList, msgBuf);
 	}
 }

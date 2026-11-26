@@ -3,7 +3,7 @@
 // ------------------------------------------------------------
 #include "RPC_ServerStub.h"
 
-bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
+bool Stub::MessageDispatcher(Session* session, MessageHeader& header, MsgBuf& msg)
 {
 	switch ((MessageType)header.type)
 	{
@@ -13,7 +13,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> direction >> x >> y;
-			return this->MoveStart(session, direction, x, y);
+			return this->RecvMoveStart(session, direction, x, y);
 		}
 		case MessageType::CS_MoveStop:
 		{
@@ -21,7 +21,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> direction >> x >> y;
-			return this->MoveStop(session, direction, x, y);
+			return this->RecvMoveStop(session, direction, x, y);
 		}
 		case MessageType::CS_Attack1:
 		{
@@ -29,7 +29,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> direction >> x >> y;
-			return this->Attack1(session, direction, x, y);
+			return this->RecvAttack1(session, direction, x, y);
 		}
 		case MessageType::CS_Attack2:
 		{
@@ -37,7 +37,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> direction >> x >> y;
-			return this->Attack2(session, direction, x, y);
+			return this->RecvAttack2(session, direction, x, y);
 		}
 		case MessageType::CS_Attack3:
 		{
@@ -45,7 +45,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> direction >> x >> y;
-			return this->Attack3(session, direction, x, y);
+			return this->RecvAttack3(session, direction, x, y);
 		}
 		default:
 		{

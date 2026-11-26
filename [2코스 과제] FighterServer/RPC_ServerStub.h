@@ -7,22 +7,16 @@
 #include "Protocol.h"
 #include "MsgBuf.h"
 #include "Common.h"
-
-class StubInterface
-{
-public:
-	virtual ~StubInterface() = default;
-	virtual bool MessageProc(Session* session, MessageHeader& header, MsgBuf& msg) = 0;
-};
+#include "StubInterface.h"
 
 class Stub : public StubInterface
 {
 public:
-	bool MessageProc(Session* session, MessageHeader& header, MsgBuf& msg) override;
+	bool MessageDispatcher(Session* session, MessageHeader& header, MsgBuf& msg) override;
 
-	virtual bool MoveStart(Session* session, char direction, short x, short y) { return false; }
-	virtual bool MoveStop(Session* session, char direction, short x, short y) { return false; }
-	virtual bool Attack1(Session* session, char direction, short x, short y) { return false; }
-	virtual bool Attack2(Session* session, char direction, short x, short y) { return false; }
-	virtual bool Attack3(Session* session, char direction, short x, short y) { return false; }
+	virtual bool RecvMoveStart(Session* session, char direction, short x, short y) { return false; }
+	virtual bool RecvMoveStop(Session* session, char direction, short x, short y) { return false; }
+	virtual bool RecvAttack1(Session* session, char direction, short x, short y) { return false; }
+	virtual bool RecvAttack2(Session* session, char direction, short x, short y) { return false; }
+	virtual bool RecvAttack3(Session* session, char direction, short x, short y) { return false; }
 };

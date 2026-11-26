@@ -4,22 +4,17 @@
 #pragma once
 
 #include "Session.h"
-
-enum class SendType
-{
-	Unicast = 0,
-	Broadcast = 1
-};
+#include "List.h"
 
 namespace RPC
 {
-	void CreatePlayer(SendType sendType, Session* session, int id, char direction, short x, short y, char hp);
-	void CreateOther(SendType sendType, Session* session, int id, char direction, short x, short y, char hp);
-	void DeletePlayer(SendType sendType, Session* session, int id);
-	void MoveStart(SendType sendType, Session* session, int id, char direction, short x, short y);
-	void MoveStop(SendType sendType, Session* session, int id, char direction, short x, short y);
-	void Attack1(SendType sendType, Session* session, int id, char direction, short x, short y);
-	void Attack2(SendType sendType, Session* session, int id, char direction, short x, short y);
-	void Attack3(SendType sendType, Session* session, int id, char direction, short x, short y);
-	void Damage(SendType sendType, Session* session, int attackID, int targetID, char targetHP);
+	void SendCreatePlayer(List<Session*>& sessionList, int id, char direction, short x, short y, char hp);
+	void SendCreateOther(List<Session*>& sessionList, int id, char direction, short x, short y, char hp);
+	void SendDeletePlayer(List<Session*>& sessionList, int id);
+	void SendMoveStart(List<Session*>& sessionList, int id, char direction, short x, short y);
+	void SendMoveStop(List<Session*>& sessionList, int id, char direction, short x, short y);
+	void SendAttack1(List<Session*>& sessionList, int id, char direction, short x, short y);
+	void SendAttack2(List<Session*>& sessionList, int id, char direction, short x, short y);
+	void SendAttack3(List<Session*>& sessionList, int id, char direction, short x, short y);
+	void SendDamage(List<Session*>& sessionList, int attackID, int targetID, char targetHP);
 }

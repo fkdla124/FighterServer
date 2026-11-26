@@ -3,7 +3,7 @@
 // ------------------------------------------------------------
 #include "RPC_ClientStub.h"
 
-bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
+bool Stub::MessageDispatcher(Session* session, MessageHeader& header, MsgBuf& msg)
 {
 	switch ((MessageType)header.type)
 	{
@@ -15,7 +15,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short y;
 			char hp;
 			msg >> id >> direction >> x >> y >> hp;
-			return this->CreatePlayer(session, id, direction, x, y, hp);
+			return this->RecvCreatePlayer(session, id, direction, x, y, hp);
 		}
 		case MessageType::SC_CreateOther:
 		{
@@ -25,13 +25,13 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short y;
 			char hp;
 			msg >> id >> direction >> x >> y >> hp;
-			return this->CreateOther(session, id, direction, x, y, hp);
+			return this->RecvCreateOther(session, id, direction, x, y, hp);
 		}
 		case MessageType::SC_DeletePlayer:
 		{
 			int id;
 			msg >> id;
-			return this->DeletePlayer(session, id);
+			return this->RecvDeletePlayer(session, id);
 		}
 		case MessageType::SC_MoveStart:
 		{
@@ -40,7 +40,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> id >> direction >> x >> y;
-			return this->MoveStart(session, id, direction, x, y);
+			return this->RecvMoveStart(session, id, direction, x, y);
 		}
 		case MessageType::SC_MoveStop:
 		{
@@ -49,7 +49,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> id >> direction >> x >> y;
-			return this->MoveStop(session, id, direction, x, y);
+			return this->RecvMoveStop(session, id, direction, x, y);
 		}
 		case MessageType::SC_Attack1:
 		{
@@ -58,7 +58,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> id >> direction >> x >> y;
-			return this->Attack1(session, id, direction, x, y);
+			return this->RecvAttack1(session, id, direction, x, y);
 		}
 		case MessageType::SC_Attack2:
 		{
@@ -67,7 +67,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> id >> direction >> x >> y;
-			return this->Attack2(session, id, direction, x, y);
+			return this->RecvAttack2(session, id, direction, x, y);
 		}
 		case MessageType::SC_Attack3:
 		{
@@ -76,7 +76,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			short x;
 			short y;
 			msg >> id >> direction >> x >> y;
-			return this->Attack3(session, id, direction, x, y);
+			return this->RecvAttack3(session, id, direction, x, y);
 		}
 		case MessageType::SC_Damage:
 		{
@@ -84,7 +84,7 @@ bool Stub::MessageProc(Session* session, MessageHeader& header, MsgBuf& msg)
 			int targetID;
 			char targetHP;
 			msg >> attackID >> targetID >> targetHP;
-			return this->Damage(session, attackID, targetID, targetHP);
+			return this->RecvDamage(session, attackID, targetID, targetHP);
 		}
 		default:
 		{
