@@ -389,10 +389,39 @@ void ProcessMessage(Session* session)
 		msg.MoveRear(popLen);
 
 		// 인터페이스로 호출
-		if (iStub == nullptr || iStub->MessageDispatcher(session, header, msg) == false)
+		if (iStub != nullptr)
 		{
-			DisconnectSession(session);
-			return;
+			try
+			{
+				if (iStub->MessageDispatcher(session, header, msg) == false)
+				{
+					DisconnectSession(session);
+					return;
+				}
+			}
+			catch (std::runtime_error& e)
+			{
+				// file log
+				// =======================================================================================================
+				tm t;
+				time_t tt = time(NULL);
+				localtime_s(&t, &tt);
+				char fileName[128];
+				sprintf_s(fileName, "[MsgBuf Error]%04d%02d%02d_%02d%02d%02d.txt", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
+
+				#pragma warning(disable:6387 6328) // fp가 NULL일 수 있다. fwprintf() 정수 서식지정자 타입 불일치
+				FILE* fp;
+				fopen_s(&fp, fileName, "wb");
+
+				fprintf(fp, "session ID: %d\n\n", session->id);
+				fprintf(fp, e.what());
+				#pragma warning(default)
+				// =======================================================================================================
+
+				DisconnectSession(session);
+
+				return;
+			}
 		}
 	}
 }
